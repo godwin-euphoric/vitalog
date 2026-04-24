@@ -15,6 +15,42 @@
 
   <div id="app">
 
+    <!-- ─── AUTH MODAL ───────────────────────────────────────────────── -->
+    <div id="auth-modal" class="auth-overlay">
+      <div class="auth-box">
+
+        <!-- Login -->
+        <div id="auth-login" class="auth-section active">
+          <div class="auth-brand">VitaLog</div>
+          <h2 class="auth-title">Welcome back</h2>
+          <p class="auth-sub">Sign in to access your data from any device.</p>
+          <input type="email"    id="auth-email"    class="auth-input" placeholder="Email address" autocomplete="email" />
+          <input type="password" id="auth-password" class="auth-input" placeholder="Password" autocomplete="current-password" />
+          <p class="input-error" id="auth-error"></p>
+          <div class="onboard-actions">
+            <button class="btn-primary" id="auth-login-btn">Sign In</button>
+            <button class="btn-ghost"   id="auth-goto-signup">Don't have an account? Sign up</button>
+          </div>
+        </div>
+
+        <!-- Sign up -->
+        <div id="auth-signup" class="auth-section">
+          <div class="auth-brand">VitaLog</div>
+          <h2 class="auth-title">Create account</h2>
+          <p class="auth-sub">Your data stays private and syncs across all your devices.</p>
+          <input type="email"    id="auth-signup-email"    class="auth-input" placeholder="Email address" autocomplete="email" />
+          <input type="password" id="auth-signup-password" class="auth-input" placeholder="Password (min 6 characters)" autocomplete="new-password" />
+          <p class="input-error" id="auth-signup-error"></p>
+          <div class="onboard-actions">
+            <button class="btn-primary" id="auth-signup-btn">Create Account</button>
+            <button class="btn-ghost"   id="auth-goto-login">Already have an account? Sign in</button>
+          </div>
+          <p class="auth-sync-note">Your Gemini API key and all logs are encrypted and stored privately under your account.</p>
+        </div>
+
+      </div>
+    </div>
+
     <!-- ─── ONBOARDING MODAL ──────────────────────────────────────── -->
     <div id="onboarding-modal" class="onboard-overlay">
       <div class="onboard-box">
@@ -394,6 +430,14 @@
           <button class="btn-primary settings-btn" id="btn-save-key">Save API Key</button>
         </div>
 
+        <!-- Sign out -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <span>Account</span>
+          </div>
+          <button class="btn-outline" id="btn-sign-out" style="margin:0">Sign Out</button>
+        </div>
+
         <!-- Danger zone -->
         <div class="settings-card danger-card">
           <p class="settings-danger-label">Danger Zone</p>
@@ -500,6 +544,9 @@
 
   </div><!-- #app -->
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

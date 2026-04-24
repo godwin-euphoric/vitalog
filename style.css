@@ -721,6 +721,49 @@ body {
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
 /* ════════════════════════════════════════════════════════════════════
+   AUTH MODAL
+   ════════════════════════════════════════════════════════════════════ */
+
+.auth-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  z-index: 600;
+  display: flex; align-items: center; justify-content: center;
+  padding: 32px 20px; overflow-y: auto;
+}
+.auth-overlay.hidden { display: none; }
+.auth-box { width: 100%; max-width: 400px; }
+
+.auth-section { display: none; }
+.auth-section.active { display: block; }
+
+.auth-brand {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 42px; color: var(--accent);
+  letter-spacing: 2px; margin-bottom: 20px;
+}
+.auth-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px; color: var(--text);
+  letter-spacing: 1px; margin-bottom: 8px;
+}
+.auth-sub { color: var(--text-muted); font-size: 14px; margin-bottom: 28px; line-height: 1.5; }
+
+.auth-input {
+  display: block; width: 100%;
+  background: var(--bg-card-2); border: 1.5px solid #2a2a2a;
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 16px; outline: none; margin-bottom: 12px;
+}
+.auth-input:focus { border-color: var(--accent); }
+
+.auth-sync-note {
+  font-size: 12px; color: var(--text-muted);
+  text-align: center; margin-top: 20px; line-height: 1.6;
+}
+
+/* ════════════════════════════════════════════════════════════════════
    FEATURE 1 — QUICK WORKOUT WHEEL
    ════════════════════════════════════════════════════════════════════ */
 

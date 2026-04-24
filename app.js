@@ -1,5 +1,17 @@
 /* ─── VitaLog — app.js ───────────────────────────────────────────── */
 
+/* ─── Firebase init ─────────────────────────────────────────────── */
+firebase.initializeApp({
+  apiKey:            'AIzaSyAJ3KMI-S2nCZHDsVYdPaL6GPfT5Z5FdO8',
+  authDomain:        'vitalog-bcb65.firebaseapp.com',
+  projectId:         'vitalog-bcb65',
+  storageBucket:     'vitalog-bcb65.firebasestorage.app',
+  messagingSenderId: '386064075434',
+  appId:             '1:386064075434:web:27815ff47fd41b352a1ed3',
+});
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
 document.addEventListener('DOMContentLoaded', () => {
 
   // ════════════════════════════════════════════════════════════════
@@ -139,6 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
     Store.setRaw('vitaLog_onboarded', 'true');
     document.getElementById('display-calories').textContent = tempProfile.calorieTarget;
     showStep('step-done');
+    fsSet('profile', tempProfile).catch(() => {});
+    fsSet('settings', { apiKey: key }).catch(() => {});
   });
 
   document.getElementById('btn-start-tracking').addEventListener('click', () => {
@@ -254,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
       workoutKcal: dayData.workouts.reduce((s, w) => s + (w.calories_burnt || 0), 0),
     };
     Store.set('vitaLog_history', history);
+    fsSet('history', history).catch(() => {});
   }
 
   // Check every minute if the date has changed
@@ -527,7 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // TODAY'S DATA
   // ════════════════════════════════════════════════════════════════
 
-  let todayData = loadToday();
+  let todayData; // assigned in bootApp() after Firestore sync
   let calorieWarningLevel = 0; // 0=ok, 1=75%+, 2=100%+
 
   function loadToday() {
@@ -539,6 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function saveToday() {
     Store.set('vitaLog_today', todayData);
+    fsSet('today', todayData).catch(() => {});
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -869,6 +885,7 @@ Use null for any value you are unsure about. Estimate reasonable values where po
     const profile = Store.get('vitaLog_profile') || {};
     profile.calorieTarget = val;
     Store.set('vitaLog_profile', profile);
+    fsSet('profile', profile).catch(() => {});
     document.getElementById('settings-cal-display').textContent = val + ' kcal';
     document.getElementById('settings-cal-input').value = '';
     renderDashboard();
@@ -879,6 +896,7 @@ Use null for any value you are unsure about. Estimate reasonable values where po
     const key = document.getElementById('settings-key-input').value.trim();
     if (!key) { showToast('Please paste your API key.'); return; }
     Store.setRaw('vitaLog_apiKey', key);
+    fsSet('settings', { apiKey: key }).catch(() => {});
     document.getElementById('settings-key-input').value = '';
     showToast('API key updated.');
   });
@@ -1372,13 +1390,136 @@ If asked about calories or macros, give practical, actionable advice.`;
   chatMic.addEventListener('click', () => startVoice(chatInput, chatMic));
 
   // ════════════════════════════════════════════════════════════════
+  // FIRESTORE HELPERS
+  // ════════════════════════════════════════════════════════════════
+
+  async function fsSet(docName, data) {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    try {
+      await db.collection('users').doc(uid).collection('data').doc(docName).set(data);
+    } catch (e) { /* offline — localStorage has it */ }
+  }
+
+  async function fsGet(docName) {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return null;
+    try {
+      const snap = await db.collection('users').doc(uid).collection('data').doc(docName).get();
+      return snap.exists ? snap.data() : null;
+    } catch (e) { return null; }
+  }
+
+  async function loadFromFirestore() {
+    const [profile, settings, today, history] = await Promise.all([
+      fsGet('profile'), fsGet('settings'), fsGet('today'), fsGet('history'),
+    ]);
+    if (profile)           { Store.set('vitaLog_profile', profile); Store.setRaw('vitaLog_onboarded', 'true'); }
+    if (settings?.apiKey)  Store.setRaw('vitaLog_apiKey', settings.apiKey);
+    if (today)             Store.set('vitaLog_today', today);
+    if (history)           Store.set('vitaLog_history', history);
+  }
+
+  async function pushLocalToFirestore() {
+    const profile = Store.get('vitaLog_profile');
+    const apiKey  = Store.raw('vitaLog_apiKey');
+    const today   = Store.get('vitaLog_today');
+    const history = Store.get('vitaLog_history');
+    const tasks   = [];
+    if (profile) tasks.push(fsSet('profile', profile));
+    if (apiKey)  tasks.push(fsSet('settings', { apiKey }));
+    if (today)   tasks.push(fsSet('today', today));
+    if (history) tasks.push(fsSet('history', history));
+    await Promise.all(tasks);
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // AUTH MODAL
+  // ════════════════════════════════════════════════════════════════
+
+  function showAuthSection(id) {
+    document.querySelectorAll('.auth-section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  document.getElementById('auth-goto-signup').addEventListener('click', () => showAuthSection('auth-signup'));
+  document.getElementById('auth-goto-login').addEventListener('click',  () => showAuthSection('auth-login'));
+
+  document.getElementById('auth-login-btn').addEventListener('click', async () => {
+    const email = document.getElementById('auth-email').value.trim();
+    const pass  = document.getElementById('auth-password').value;
+    const err   = document.getElementById('auth-error');
+    if (!email || !pass) { err.textContent = 'Please enter your email and password.'; return; }
+    err.textContent = '';
+    document.getElementById('auth-login-btn').disabled = true;
+    try {
+      await auth.signInWithEmailAndPassword(email, pass);
+    } catch (e) {
+      document.getElementById('auth-login-btn').disabled = false;
+      err.textContent = getAuthError(e.code);
+    }
+  });
+
+  document.getElementById('auth-signup-btn').addEventListener('click', async () => {
+    const email = document.getElementById('auth-signup-email').value.trim();
+    const pass  = document.getElementById('auth-signup-password').value;
+    const err   = document.getElementById('auth-signup-error');
+    if (!email || !pass) { err.textContent = 'Please enter your email and password.'; return; }
+    if (pass.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
+    err.textContent = '';
+    document.getElementById('auth-signup-btn').disabled = true;
+    try {
+      await auth.createUserWithEmailAndPassword(email, pass);
+      await pushLocalToFirestore();
+    } catch (e) {
+      document.getElementById('auth-signup-btn').disabled = false;
+      err.textContent = getAuthError(e.code);
+    }
+  });
+
+  function getAuthError(code) {
+    if (['auth/user-not-found','auth/wrong-password','auth/invalid-credential'].includes(code))
+      return 'Incorrect email or password.';
+    if (code === 'auth/email-already-in-use') return 'An account with this email already exists.';
+    if (code === 'auth/invalid-email')        return 'Please enter a valid email address.';
+    if (code === 'auth/weak-password')        return 'Password must be at least 6 characters.';
+    if (code === 'auth/too-many-requests')    return 'Too many attempts. Try again later.';
+    return 'Something went wrong. Please try again.';
+  }
+
+  // Sign out
+  document.getElementById('btn-sign-out').addEventListener('click', () => {
+    showConfirm('Sign out? Your data is safely saved in the cloud.', () => {
+      ['vitaLog_today','vitaLog_history','vitaLog_profile','vitaLog_apiKey','vitaLog_onboarded']
+        .forEach(k => Store.remove(k));
+      auth.signOut().then(() => location.reload());
+    });
+  });
+
+  // ════════════════════════════════════════════════════════════════
   // BOOT
   // ════════════════════════════════════════════════════════════════
 
-  initApp();
-  checkMidnightReset();
-  renderDashboard();
-  renderFoodLog();
-  renderWorkoutLog();
+  function bootApp() {
+    todayData = loadToday();
+    initApp();
+    checkMidnightReset();
+    renderDashboard();
+    renderFoodLog();
+    renderWorkoutLog();
+  }
+
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      document.getElementById('auth-modal').classList.add('hidden');
+      showToast('Syncing your data...');
+      await loadFromFirestore();
+      bootApp();
+    } else {
+      document.getElementById('auth-modal').classList.remove('hidden');
+      document.getElementById('auth-login-btn').disabled  = false;
+      document.getElementById('auth-signup-btn').disabled = false;
+    }
+  });
 
 });
