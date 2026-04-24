@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#080808" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>VitaLog</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="app">
+
+    <!-- ─── ONBOARDING MODAL ──────────────────────────────────────── -->
+    <div id="onboarding-modal" class="onboard-overlay">
+      <div class="onboard-box">
+
+        <div class="onboard-step active" id="step-welcome">
+          <div class="onboard-brand">VitaLog</div>
+          <h2 class="onboard-title">Track your health,<br>fuel your goals.</h2>
+          <p class="onboard-sub">Let's set your daily calorie target to get started.</p>
+          <div class="onboard-actions">
+            <button class="btn-primary" id="btn-calc-path">Calculate for me</button>
+            <button class="btn-outline" id="btn-manual-path">I'll set it manually</button>
+          </div>
+        </div>
+
+        <div class="onboard-step" id="step-gender">
+          <p class="step-label">Step 1 of 6</p>
+          <h2 class="onboard-title">Biological sex?</h2>
+          <p class="onboard-sub">Used in the calorie formula</p>
+          <div class="choice-row">
+            <button class="choice-card" data-value="male">&#9794; Male</button>
+            <button class="choice-card" data-value="female">&#9792; Female</button>
+          </div>
+        </div>
+
+        <div class="onboard-step" id="step-age">
+          <p class="step-label">Step 2 of 6</p>
+          <h2 class="onboard-title">How old are you?</h2>
+          <div class="input-row">
+            <input type="number" class="onboard-input" id="input-age" placeholder="25" min="10" max="100" />
+            <span class="input-unit">yrs</span>
+          </div>
+          <p class="input-error" id="error-age"></p>
+          <div class="onboard-actions">
+            <button class="btn-primary" id="next-age">Next</button>
+            <button class="btn-ghost" data-back="step-gender">Back</button>
+          </div>
+        </div>
+
+        <div class="onboard-step" id="step-weight">
+          <p class="step-label">Step 3 of 6</p>
+          <h2 class="onboard-title">Your weight?</h2>
+          <div class="input-row">
+            <input type="number" class="onboard-input" id="input-weight" placeholder="70" min="20" max="300" />
+            <span class="input-unit">kg</span>
+          </div>
+          <p class="input-error" id="error-weight"></p>
+          <div class="onboard-actions">
+            <button class="btn-primary" id="next-weight">Next</button>
+            <button class="btn-ghost" data-back="step-age">Back</button>
+          </div>
+        </div>
+
+        <div class="onboard-step" id="step-height">
+          <p class="step-label">Step 4 of 6</p>
+          <h2 class="onboard-title">Your height?</h2>
+          <div class="input-row">
+            <input type="number" class="onboard-input" id="input-height" placeholder="175" min="100" max="250" />
+            <span class="input-unit">cm</span>
+          </div>
+          <p class="input-error" id="error-height"></p>
+          <div class="onboard-actions">
+            <button class="btn-primary" id="next-height">Next</button>
+            <button class="btn-ghost" data-back="step-weight">Back</button>
+          </div>
+        </div>
+
+        <div class="onboard-step" id="step-activity">
+          <p class="step-label">Step 5 of 6</p>
+          <h2 class="onboard-title">Activity level?</h2>
+          <div class="choice-list">
+            <button class="choice-item" data-value="1.2"><strong>Sedentary</strong><span>Desk job, little or no exercise</span></button>
+            <button class="choice-item" data-value="1.375"><strong>Lightly active</strong><span>Exercise 1–3 days/week</span></button>
+            <button class="choice-item" data-value="1.55"><strong>Moderately active</strong><span>Exercise 3–5 days/week</span></button>
+            <button class="choice-item" data-value="1.725"><strong>Very active</strong><span>Hard exercise 6–7 days/week</span></button>
+            <button class="choice-item" data-value="1.9"><strong>Extra active</strong><span>Athlete or physical job</span></button>
+          </div>
+          <button class="btn-ghost" data-back="step-height" style="margin-top:12px">Back</button>
+        </div>
+
+        <div class="onboard-step" id="step-goal">
+          <p class="step-label">Step 6 of 6</p>
+          <h2 class="onboard-title">Your goal?</h2>
+          <div class="choice-list">
+            <button class="choice-item" data-value="-500"><strong>Lose weight</strong><span>500 kcal deficit per day</span></button>
+            <button class="choice-item" data-value="0"><strong>Maintain weight</strong><span>Eat at your daily energy needs</span></button>
+            <button class="choice-item" data-value="500"><strong>Gain weight</strong><span>500 kcal surplus per day</span></button>
+          </div>
+          <button class="btn-ghost" data-back="step-activity" style="margin-top:12px">Back</button>
+        </div>
+
+        <div class="onboard-step" id="step-manual">
+          <h2 class="onboard-title">Daily calorie target</h2>
+          <p class="onboard-sub">How many calories per day?</p>
+          <div class="input-row">
+            <input type="number" class="onboard-input" id="input-manual-cal" placeholder="2000" min="500" max="10000" />
+            <span class="input-unit">kcal</span>
+          </div>
+          <p class="input-error" id="error-manual"></p>
+          <div class="onboard-actions">
+            <button class="btn-primary" id="next-manual">Continue</button>
+            <button class="btn-ghost" data-back="step-welcome">Back</button>
+          </div>
+        </div>
+
+        <div class="onboard-step" id="step-apikey">
+          <h2 class="onboard-title">Gemini API Key</h2>
+          <p class="onboard-sub">Saved only on this device. Never shared with anyone.</p>
+          <input type="password" class="onboard-input full" id="input-apikey" placeholder="Paste your API key here" />
+          <p class="input-error" id="error-apikey"></p>
+          <p class="onboard-link">
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Get a free key at Google AI Studio &rarr;</a>
+          </p>
+          <div class="onboard-actions">
+            <button class="btn-primary" id="btn-finish-setup">Finish Setup</button>
+          </div>
+        </div>
+
+        <div class="onboard-step" id="step-done">
+          <div class="done-check">&#10003;</div>
+          <h2 class="onboard-title">You're all set!</h2>
+          <p class="onboard-sub">Your daily calorie target</p>
+          <div class="calorie-display">
+            <span id="display-calories">—</span>
+            <small>kcal / day</small>
+          </div>
+          <button class="btn-primary" id="btn-start-tracking">Start Tracking</button>
+        </div>
+
+      </div>
+    </div><!-- /onboarding-modal -->
+
+    <!-- ─── TAB PANELS ─────────────────────────────────────────────── -->
+    <main class="tab-container">
+
+      <!-- HOME TAB -->
+      <section class="tab-panel active" id="tab-home">
+        <div class="page-header">
+          <h1 class="logo">VitaLog</h1>
+        </div>
+
+        <!-- ── DAILY DASHBOARD ──────────────────────────────────── -->
+
+        <!-- Warning banner: shown at 75% and 100% -->
+        <div class="warning-banner hidden" id="warning-banner">
+          <span id="warning-text"></span>
+        </div>
+
+        <!-- Calorie ring + center text -->
+        <div class="ring-section">
+          <div class="ring-wrap">
+            <svg class="ring-svg" viewBox="0 0 120 120">
+              <circle class="ring-bg"       cx="60" cy="60" r="52"/>
+              <circle class="ring-progress" cx="60" cy="60" r="52" id="calorie-ring"/>
+            </svg>
+            <div class="ring-center">
+              <span class="ring-consumed" id="ring-consumed">0</span>
+              <small>of <span id="ring-target">—</span> kcal</small>
+            </div>
+          </div>
+
+          <!-- Net calories card beside the ring -->
+          <div class="net-card">
+            <div class="net-row">
+              <span class="net-label">Consumed</span>
+              <span class="net-value" id="net-consumed">0</span>
+            </div>
+            <div class="net-row">
+              <span class="net-label">Burnt</span>
+              <span class="net-value accent" id="net-burnt">0</span>
+            </div>
+            <div class="net-divider"></div>
+            <div class="net-row">
+              <span class="net-label">Net</span>
+              <span class="net-value" id="net-total">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Macro pills row -->
+        <div class="dash-macros">
+          <div class="dash-macro-pill">
+            <span id="dash-protein">0g</span>
+            <small>Protein</small>
+          </div>
+          <div class="dash-macro-pill">
+            <span id="dash-carbs">0g</span>
+            <small>Carbs</small>
+          </div>
+          <div class="dash-macro-pill">
+            <span id="dash-fat">0g</span>
+            <small>Fat</small>
+          </div>
+          <div class="dash-macro-pill">
+            <span id="dash-fibre">0g</span>
+            <small>Fibre</small>
+          </div>
+        </div>
+
+        <!-- ── FOOD LOGGING ─────────────────────────────────────── -->
+        <div class="home-section">
+          <h2 class="section-title">Log Food</h2>
+          <div class="input-bar">
+            <input type="text" id="food-input" class="log-input" placeholder="What did you eat? e.g. 2 eggs and toast" autocomplete="off" />
+            <button class="mic-btn" id="food-mic-btn" aria-label="Voice input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            <button class="send-btn" id="food-send-btn" aria-label="Log food">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5"/>
+                <polyline points="5 12 12 5 19 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="log-status hidden" id="food-loading">
+            <div class="spinner"></div>
+            <span>Analyzing nutrition...</span>
+          </div>
+        </div>
+
+        <div id="food-log-list"></div>
+        <p class="empty-log hidden" id="food-empty">No food logged yet today.</p>
+
+        <!-- ── WORKOUT LOGGING ──────────────────────────────────── -->
+        <div class="home-section" style="margin-top: 28px;">
+          <h2 class="section-title">Log Workout</h2>
+          <div class="input-bar">
+            <input type="text" id="workout-input" class="log-input" placeholder="What did you do? e.g. 30 min running" autocomplete="off" />
+            <button class="mic-btn" id="workout-mic-btn" aria-label="Voice input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            <button class="send-btn workout-send" id="workout-send-btn" aria-label="Log workout">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5"/>
+                <polyline points="5 12 12 5 19 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="log-status hidden" id="workout-loading">
+            <div class="spinner"></div>
+            <span>Estimating calories burnt...</span>
+          </div>
+        </div>
+
+        <div id="workout-log-list"></div>
+        <p class="empty-log hidden" id="workout-empty">No workouts logged yet today.</p>
+
+      </section>
+
+      <!-- CHAT TAB -->
+      <section class="tab-panel" id="tab-chat">
+        <div class="page-header"><h1>AI Chat</h1></div>
+
+        <!-- Chat messages -->
+        <div id="chat-messages" class="chat-messages">
+          <div class="chat-bubble gemini">
+            Hi! I'm your nutrition assistant. Ask me anything about food, calories, workouts, or your health goals.
+          </div>
+        </div>
+
+        <!-- Chat input bar (fixed above bottom nav) -->
+        <div class="chat-input-wrap">
+          <div class="input-bar">
+            <input type="text" id="chat-input" class="log-input" placeholder="Ask a nutrition question..." autocomplete="off" />
+            <button class="mic-btn" id="chat-mic-btn" aria-label="Voice input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            <button class="send-btn" id="chat-send-btn" aria-label="Send">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5"/>
+                <polyline points="5 12 12 5 19 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- DASHBOARD TAB -->
+      <section class="tab-panel" id="tab-dashboard">
+        <div class="page-header"><h1>Dashboard</h1></div>
+        <nav class="sub-nav">
+          <button class="sub-nav-btn active" data-subtab="weekly">Weekly</button>
+          <button class="sub-nav-btn" data-subtab="monthly">Monthly</button>
+          <button class="sub-nav-btn" data-subtab="yearly">Yearly</button>
+        </nav>
+        <div class="sub-panel active" id="subtab-weekly">
+          <canvas id="weekly-chart" class="dash-chart"></canvas>
+          <div class="dash-stats-row">
+            <div class="dash-stat-card">
+              <span id="weekly-total-deficit">—</span>
+              <small>7-day deficit/surplus</small>
+            </div>
+            <div class="dash-stat-card">
+              <span id="weekly-avg-deficit">—</span>
+              <small>daily avg deficit/surplus</small>
+            </div>
+          </div>
+          <div class="dash-section-label">Today's macro split</div>
+          <div class="macro-split-row" id="weekly-macro-split">
+            <div class="macro-split-pill protein"><span id="split-protein">—</span><small>Protein</small></div>
+            <div class="macro-split-pill carbs"><span id="split-carbs">—</span><small>Carbs</small></div>
+            <div class="macro-split-pill fat"><span id="split-fat">—</span><small>Fat</small></div>
+          </div>
+          <div class="dash-section-label">Today's workout burn</div>
+          <div class="dash-single-stat" id="weekly-workout-burn">0 kcal burnt</div>
+        </div>
+        <div class="sub-panel" id="subtab-monthly">
+          <canvas id="monthly-chart" class="dash-chart"></canvas>
+          <div class="dash-stats-row">
+            <div class="dash-stat-card"><span id="monthly-avg">—</span><small>daily avg this month</small></div>
+            <div class="dash-stat-card"><span id="monthly-total-deficit">—</span><small>month deficit/surplus</small></div>
+          </div>
+          <div class="dash-stats-row" style="margin-top:8px">
+            <div class="dash-stat-card accent"><span id="monthly-best">—</span><small>best day</small></div>
+            <div class="dash-stat-card danger"><span id="monthly-worst">—</span><small>worst day</small></div>
+          </div>
+          <div class="dash-section-label">Streak</div>
+          <div class="dash-single-stat" id="monthly-streak">0 days logged in a row</div>
+          <div class="dash-section-label">Total workout burn this month</div>
+          <div class="dash-single-stat" id="monthly-workout-burn">0 kcal</div>
+        </div>
+
+        <div class="sub-panel" id="subtab-yearly">
+          <canvas id="yearly-chart" class="dash-chart"></canvas>
+          <div class="dash-stats-row">
+            <div class="dash-stat-card"><span id="yearly-total-cals">—</span><small>total kcal this year</small></div>
+            <div class="dash-stat-card"><span id="yearly-avg">—</span><small>daily avg this year</small></div>
+          </div>
+          <div class="dash-stats-row" style="margin-top:8px">
+            <div class="dash-stat-card accent"><span id="yearly-best-month">—</span><small>best month</small></div>
+            <div class="dash-stat-card danger"><span id="yearly-worst-month">—</span><small>worst month</small></div>
+          </div>
+          <div class="dash-section-label">Total workout burn this year</div>
+          <div class="dash-single-stat" id="yearly-workout-burn">0 kcal</div>
+        </div>
+      </section>
+
+      <!-- SETTINGS TAB -->
+      <section class="tab-panel" id="tab-settings">
+        <div class="page-header"><h1>Settings</h1></div>
+
+        <!-- Change calorie target -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <span>Daily Calorie Target</span>
+            <span class="settings-current" id="settings-cal-display">— kcal</span>
+          </div>
+          <div class="settings-input-row">
+            <input type="number" id="settings-cal-input" class="settings-input" placeholder="e.g. 2000" min="500" max="10000" />
+            <span class="input-unit">kcal</span>
+          </div>
+          <button class="btn-primary settings-btn" id="btn-save-calories">Save Target</button>
+        </div>
+
+        <!-- Change API key -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <span>Gemini API Key</span>
+          </div>
+          <input type="password" id="settings-key-input" class="settings-input full" placeholder="Paste new API key" />
+          <button class="btn-primary settings-btn" id="btn-save-key">Save API Key</button>
+        </div>
+
+        <!-- Danger zone -->
+        <div class="settings-card danger-card">
+          <p class="settings-danger-label">Danger Zone</p>
+          <button class="btn-danger" id="btn-reset-today">Reset Today's Log</button>
+          <button class="btn-danger" id="btn-reset-all">Reset All Data</button>
+        </div>
+
+        <p class="settings-version">VitaLog v1.0</p>
+
+      </section>
+
+    </main>
+
+    <!-- ─── BOTTOM NAVIGATION ──────────────────────────────────────── -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-tab="home" aria-label="Home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>Home</span>
+      </button>
+      <button class="nav-btn" data-tab="chat" aria-label="Chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+        </svg>
+        <span>Chat</span>
+      </button>
+      <button class="nav-btn" data-tab="dashboard" aria-label="Dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-btn" data-tab="settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <!-- ─── CONFIRMATION MODAL ───────────────────────────────────────── -->
+    <div id="confirm-modal" class="confirm-overlay hidden">
+      <div class="confirm-box">
+        <p id="confirm-message">Are you sure?</p>
+        <div class="confirm-actions">
+          <button class="btn-danger-sm" id="confirm-yes">Yes, delete</button>
+          <button class="btn-ghost" id="confirm-no">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── GLOBAL TOAST ───────────────────────────────────────────── -->
+    <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
+
+  </div><!-- #app -->
+
+  <script src="app.js"></script>
+</body>
+</html>
