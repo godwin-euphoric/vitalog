@@ -310,6 +310,7 @@
       <!-- DASHBOARD TAB -->
       <section class="tab-panel" id="tab-dashboard">
         <div class="page-header"><h1>Dashboard</h1></div>
+        <button id="export-summary-btn" class="export-btn">&#11015; Export Summary as Image</button>
         <nav class="sub-nav">
           <button class="sub-nav-btn active" data-subtab="weekly">Weekly</button>
           <button class="sub-nav-btn" data-subtab="monthly">Monthly</button>
@@ -438,6 +439,50 @@
         <span>Settings</span>
       </button>
     </nav>
+
+    <!-- ─── QUICK WORKOUT FAB ────────────────────────────────────────── -->
+    <button id="wheel-fab" class="wheel-fab" aria-label="Quick 5-min workout">&#9889;</button>
+
+    <!-- ─── WHEEL MODAL ───────────────────────────────────────────────── -->
+    <div id="wheel-modal" class="wheel-overlay hidden">
+      <div class="wheel-box">
+        <div class="wheel-header">
+          <span class="wheel-title">Quick Workout</span>
+          <button id="wheel-close" class="wheel-close-btn" aria-label="Close">&#10005;</button>
+        </div>
+
+        <!-- Spin section -->
+        <div id="wheel-spin-section">
+          <div class="wheel-pointer-wrap">
+            <div class="wheel-pointer">&#9660;</div>
+            <canvas id="wheel-canvas" width="280" height="280"></canvas>
+          </div>
+          <button id="wheel-spin-btn" class="btn-primary" style="margin-top:20px">Spin the Wheel!</button>
+        </div>
+
+        <!-- Result section (hidden until spin ends) -->
+        <div id="wheel-result-section" class="hidden">
+          <div class="wheel-result-name" id="wheel-result-name"></div>
+          <p class="wheel-instructions" id="wheel-instructions"></p>
+          <a id="wheel-yt-link" class="wheel-yt-btn" href="#" target="_blank" rel="noopener">&#9654; Watch on YouTube</a>
+
+          <!-- Timer state -->
+          <div id="wheel-timer-section">
+            <div class="wheel-timer-display" id="wheel-timer">5:00</div>
+            <button id="wheel-start-timer-btn" class="btn-primary">Start 5-min Timer</button>
+            <button id="wheel-respin-btn" class="btn-ghost" style="margin-top:6px">Spin Again</button>
+            <button id="wheel-skip-btn" class="btn-ghost">Skip Workout</button>
+          </div>
+
+          <!-- Done state -->
+          <div id="wheel-done-section" class="hidden">
+            <div class="wheel-done-msg">Great work! Workout logged &#10003;</div>
+            <button id="wheel-done-btn" class="btn-primary" style="margin-top:16px">Close</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
 
     <!-- ─── CONFIRMATION MODAL ───────────────────────────────────────── -->
     <div id="confirm-modal" class="confirm-overlay hidden">

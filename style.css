@@ -719,3 +719,127 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ════════════════════════════════════════════════════════════════════
+   FEATURE 1 — QUICK WORKOUT WHEEL
+   ════════════════════════════════════════════════════════════════════ */
+
+.wheel-fab {
+  position: fixed;
+  bottom: calc(var(--nav-height) + 16px);
+  right: 16px;
+  width: 52px; height: 52px;
+  background: var(--accent);
+  color: #000;
+  border: none; border-radius: 50%;
+  font-size: 22px;
+  cursor: pointer;
+  z-index: 200;
+  box-shadow: 0 4px 16px rgba(200, 241, 53, 0.35);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.wheel-fab:active { transform: scale(0.93); box-shadow: 0 2px 8px rgba(200, 241, 53, 0.2); }
+
+.wheel-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.88);
+  z-index: 450;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.wheel-overlay.hidden { display: none; }
+
+.wheel-box {
+  background: #0f0f0f;
+  border: 1px solid #222;
+  border-radius: 24px 24px 0 0;
+  width: 100%; max-width: 480px;
+  padding: 20px 20px 48px;
+  max-height: 92dvh;
+  overflow-y: auto;
+}
+
+.wheel-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+}
+.wheel-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px; letter-spacing: 1.5px; color: var(--accent);
+}
+.wheel-close-btn {
+  background: #1e1e1e; border: none; color: var(--text-muted);
+  width: 32px; height: 32px; border-radius: 50%;
+  font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.wheel-pointer-wrap {
+  display: flex; flex-direction: column; align-items: center;
+}
+.wheel-pointer {
+  font-size: 22px; color: var(--accent);
+  line-height: 1; margin-bottom: -2px; position: relative; z-index: 1;
+}
+#wheel-canvas {
+  border-radius: 50%;
+  display: block;
+}
+
+.wheel-result-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px; color: var(--accent);
+  text-align: center; letter-spacing: 1.5px;
+  margin: 12px 0 8px;
+}
+.wheel-instructions {
+  color: var(--text-muted); font-size: 14px; line-height: 1.6;
+  text-align: center; margin-bottom: 14px;
+  background: #141414; border-radius: var(--radius-sm); padding: 12px 14px;
+}
+.wheel-yt-btn {
+  display: block; text-align: center;
+  background: #1a0000; color: #ff5555;
+  border: 1px solid #3a0000;
+  border-radius: var(--radius-sm);
+  padding: 11px 16px; font-size: 14px; font-weight: 600;
+  text-decoration: none; margin-bottom: 20px;
+}
+.wheel-timer-display {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 68px; color: var(--text);
+  text-align: center; letter-spacing: 3px;
+  line-height: 1; margin: 8px 0 16px;
+}
+.wheel-done-msg {
+  font-size: 18px; font-weight: 700;
+  color: var(--accent); text-align: center;
+  background: #0e1a00; border: 1px solid #2a4a00;
+  border-radius: var(--radius-sm); padding: 20px 16px;
+  margin-bottom: 8px;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   FEATURE 2 — EXPORT SUMMARY
+   ════════════════════════════════════════════════════════════════════ */
+
+.export-btn {
+  display: block; width: 100%;
+  background: var(--bg-card); color: var(--text);
+  border: 1px solid #2a2a2a;
+  border-radius: var(--radius-sm);
+  padding: 12px 16px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; text-align: center;
+  margin-bottom: 16px;
+  transition: background 0.15s;
+}
+.export-btn:active { background: #1a1a1a; }
+
+/* ════════════════════════════════════════════════════════════════════
+   FEATURE 3 — CALORIE WARNING BACKGROUND
+   ════════════════════════════════════════════════════════════════════ */
+
+#tab-home { transition: background 0.8s ease; }
+#tab-home.calorie-warn       { background: rgba(80, 0, 0, 0.28); }
+#tab-home.calorie-danger-bg  { background: rgba(130, 0, 0, 0.50); }

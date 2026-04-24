@@ -211,6 +211,22 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       banner.classList.add('hidden');
     }
+
+    // Feature 3: home background tint (food intake only, not net)
+    const homeEl    = document.getElementById('tab-home');
+    const foodRatio = totalCals / target;
+    const newLevel  = foodRatio >= 1 ? 2 : foodRatio >= 0.75 ? 1 : 0;
+    if (newLevel !== calorieWarningLevel) {
+      homeEl.classList.remove('calorie-warn', 'calorie-danger-bg');
+      if (newLevel === 2) {
+        homeEl.classList.add('calorie-danger-bg');
+        navigator.vibrate?.([200, 100, 200, 100, 200]);
+      } else if (newLevel === 1) {
+        homeEl.classList.add('calorie-warn');
+        navigator.vibrate?.(300);
+      }
+      calorieWarningLevel = newLevel;
+    }
   }
 
   // ── Midnight reset ──────────────────────────────────────────────
@@ -512,6 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ════════════════════════════════════════════════════════════════
 
   let todayData = loadToday();
+  let calorieWarningLevel = 0; // 0=ok, 1=75%+, 2=100%+
 
   function loadToday() {
     const today = new Date().toISOString().split('T')[0];
@@ -909,6 +926,382 @@ Use null for any value you are unsure about. Estimate reasonable values where po
   document.querySelectorAll('.nav-btn').forEach(btn => {
     if (btn.dataset.tab === 'settings') btn.addEventListener('click', initSettings);
   });
+
+  // ════════════════════════════════════════════════════════════════
+  // FEATURE 1 — QUICK WORKOUT WHEEL
+  // ════════════════════════════════════════════════════════════════
+
+  const WHEEL_SEGMENTS = [
+    { name: 'Walking\nin Place', label: 'Walking in Place', calories: 25,
+      instructions: 'March in place, lifting your knees to hip height. Pump your arms naturally with each step.',
+      youtube: 'https://www.youtube.com/results?search_query=5+minute+walking+in+place+workout' },
+    { name: 'Jumping\nJacks', label: 'Jumping Jacks', calories: 45,
+      instructions: 'Jump feet apart while raising arms overhead, then back to start. Keep a steady, comfortable rhythm.',
+      youtube: 'https://www.youtube.com/results?search_query=5+minute+jumping+jacks+workout' },
+    { name: 'Squats', label: 'Squats', calories: 35,
+      instructions: 'Feet shoulder-width apart. Lower until thighs are parallel to the floor, then drive back up. Keep your back straight.',
+      youtube: 'https://www.youtube.com/results?search_query=5+minute+squat+workout' },
+    { name: 'Push-ups', label: 'Push-ups', calories: 30,
+      instructions: 'Hands shoulder-width apart, body in a straight line. Lower your chest to the floor then push back up. Knees on floor is fine!',
+      youtube: 'https://www.youtube.com/results?search_query=5+minute+pushup+workout' },
+    { name: 'High\nKnees', label: 'High Knees', calories: 50,
+      instructions: 'Run in place, driving your knees up to hip height alternately. Keep your core tight and arms pumping.',
+      youtube: 'https://www.youtube.com/results?search_query=5+minute+high+knees+workout' },
+    { name: 'Plank\nHold', label: 'Plank Hold', calories: 20,
+      instructions: 'Forearms on floor, body in a straight line from head to heels. Hold and breathe steadily. Rest 15s between 45s holds.',
+      youtube: 'https://www.youtube.com/results?search_query=5+minute+plank+workout' },
+    { name: 'Burpees', label: 'Burpees', calories: 60,
+      instructions: 'Stand → squat → jump feet back to plank → push-up → jump feet forward → jump up with arms overhead. Rest as needed.',
+      youtube: 'https://www.youtube.com/results?search_query=5+minute+burpees+workout' },
+  ];
+
+  let wheelRotationDeg = 0;
+  let wheelSpinning    = false;
+  let wheelSelectedIdx = -1;
+  let wheelTimerSecs   = 300;
+  let wheelTimerTimer  = null;
+
+  function openWheelModal() {
+    document.getElementById('wheel-modal').classList.remove('hidden');
+    const canvas = document.getElementById('wheel-canvas');
+    const dpr    = window.devicePixelRatio || 1;
+    const size   = 280;
+    canvas.width  = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width  = size + 'px';
+    canvas.style.height = size + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    drawWheelCanvas(ctx, size);
+  }
+
+  function closeWheelModal() {
+    if (wheelTimerTimer) { clearInterval(wheelTimerTimer); wheelTimerTimer = null; }
+    document.getElementById('wheel-modal').classList.add('hidden');
+    resetWheelModal();
+  }
+
+  function resetWheelModal() {
+    document.getElementById('wheel-spin-section').classList.remove('hidden');
+    document.getElementById('wheel-result-section').classList.add('hidden');
+    document.getElementById('wheel-done-section').classList.add('hidden');
+    document.getElementById('wheel-timer-section').classList.remove('hidden');
+    document.getElementById('wheel-start-timer-btn').classList.remove('hidden');
+    document.getElementById('wheel-respin-btn').classList.remove('hidden');
+    document.getElementById('wheel-skip-btn').classList.remove('hidden');
+    document.getElementById('wheel-timer').textContent = '5:00';
+    document.getElementById('wheel-spin-btn').disabled = false;
+    wheelSelectedIdx = -1;
+    wheelSpinning    = false;
+    wheelTimerSecs   = 300;
+    const canvas = document.getElementById('wheel-canvas');
+    canvas.style.transition = 'none';
+    canvas.style.transform  = 'rotate(0deg)';
+    wheelRotationDeg = 0;
+  }
+
+  function drawWheelCanvas(ctx, size) {
+    const cx    = size / 2, cy = size / 2;
+    const r     = size / 2 - 6;
+    const n     = WHEEL_SEGMENTS.length;
+    const slice = (2 * Math.PI) / n;
+    const start = -Math.PI / 2; // segment 0 at 12 o'clock
+
+    ctx.clearRect(0, 0, size, size);
+
+    WHEEL_SEGMENTS.forEach((seg, i) => {
+      const a0     = start + i * slice;
+      const a1     = a0 + slice;
+      const bright = i % 2 === 0;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, a0, a1);
+      ctx.closePath();
+      ctx.fillStyle = bright ? '#c8f135' : '#1a2200';
+      ctx.fill();
+      ctx.strokeStyle = '#080808';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      const mid = a0 + slice / 2;
+      const tx  = cx + r * 0.62 * Math.cos(mid);
+      const ty  = cy + r * 0.62 * Math.sin(mid);
+      ctx.save();
+      ctx.translate(tx, ty);
+      ctx.rotate(mid + Math.PI / 2);
+      ctx.fillStyle = bright ? '#000000' : '#c8f135';
+      ctx.font = 'bold 10px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const lines = seg.name.split('\n');
+      if (lines.length > 1) {
+        ctx.fillText(lines[0], 0, -6);
+        ctx.fillText(lines[1], 0,  6);
+      } else {
+        ctx.fillText(seg.name, 0, 0);
+      }
+      ctx.restore();
+    });
+
+    // Center cap
+    ctx.beginPath();
+    ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
+    ctx.fillStyle = '#080808';
+    ctx.fill();
+    ctx.strokeStyle = '#c8f135';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#c8f135';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚡', cx, cy + 1);
+  }
+
+  function spinWheel() {
+    if (wheelSpinning) return;
+    wheelSpinning = true;
+    document.getElementById('wheel-spin-btn').disabled = true;
+
+    const extraSpins = 5 + Math.floor(Math.random() * 3);
+    const totalDeg   = extraSpins * 360 + Math.random() * 360;
+    const canvas     = document.getElementById('wheel-canvas');
+    wheelRotationDeg += totalDeg;
+    canvas.style.transition = 'transform 3.5s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
+    canvas.style.transform  = `rotate(${wheelRotationDeg}deg)`;
+
+    setTimeout(() => {
+      wheelSpinning = false;
+      const n          = WHEEL_SEGMENTS.length;
+      const normDeg    = ((wheelRotationDeg % 360) + 360) % 360;
+      const degPerSeg  = 360 / n;
+      const angleAtTop = (360 - normDeg) % 360;
+      wheelSelectedIdx = Math.floor(angleAtTop / degPerSeg) % n;
+      showWheelResult(wheelSelectedIdx);
+    }, 3600);
+  }
+
+  function showWheelResult(idx) {
+    const seg = WHEEL_SEGMENTS[idx];
+    document.getElementById('wheel-spin-section').classList.add('hidden');
+    document.getElementById('wheel-result-section').classList.remove('hidden');
+    document.getElementById('wheel-result-name').textContent = seg.label;
+    document.getElementById('wheel-instructions').textContent = seg.instructions;
+    document.getElementById('wheel-yt-link').href = seg.youtube;
+  }
+
+  function startWheelTimer() {
+    document.getElementById('wheel-start-timer-btn').classList.add('hidden');
+    document.getElementById('wheel-respin-btn').classList.add('hidden');
+    document.getElementById('wheel-skip-btn').classList.add('hidden');
+    wheelTimerSecs = 300;
+    updateWheelTimerDisplay();
+    wheelTimerTimer = setInterval(() => {
+      wheelTimerSecs--;
+      updateWheelTimerDisplay();
+      if (wheelTimerSecs % 60 === 0 && wheelTimerSecs > 0) navigator.vibrate?.(150);
+      if (wheelTimerSecs <= 0) {
+        clearInterval(wheelTimerTimer);
+        wheelTimerTimer = null;
+        onWheelTimerDone();
+      }
+    }, 1000);
+  }
+
+  function updateWheelTimerDisplay() {
+    const m = Math.floor(wheelTimerSecs / 60);
+    const s = wheelTimerSecs % 60;
+    document.getElementById('wheel-timer').textContent = `${m}:${String(s).padStart(2, '0')}`;
+  }
+
+  function onWheelTimerDone() {
+    navigator.vibrate?.([300, 100, 300, 100, 300]);
+    const seg   = WHEEL_SEGMENTS[wheelSelectedIdx];
+    const entry = {
+      id:             Date.now(),
+      time:           new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      exercise:       seg.label,
+      duration_min:   5,
+      calories_burnt: seg.calories,
+    };
+    todayData.workouts.push(entry);
+    saveToday();
+    renderWorkoutLog();
+    renderDashboard();
+    document.getElementById('wheel-timer-section').classList.add('hidden');
+    document.getElementById('wheel-done-section').classList.remove('hidden');
+  }
+
+  document.getElementById('wheel-fab').addEventListener('click', openWheelModal);
+  document.getElementById('wheel-close').addEventListener('click', closeWheelModal);
+  document.getElementById('wheel-spin-btn').addEventListener('click', spinWheel);
+  document.getElementById('wheel-start-timer-btn').addEventListener('click', startWheelTimer);
+  document.getElementById('wheel-done-btn').addEventListener('click', closeWheelModal);
+  document.getElementById('wheel-skip-btn').addEventListener('click', closeWheelModal);
+  document.getElementById('wheel-respin-btn').addEventListener('click', () => {
+    document.getElementById('wheel-result-section').classList.add('hidden');
+    document.getElementById('wheel-spin-section').classList.remove('hidden');
+    const canvas = document.getElementById('wheel-canvas');
+    canvas.style.transition = 'none';
+    canvas.style.transform  = 'rotate(0deg)';
+    wheelRotationDeg = 0;
+    wheelSelectedIdx = -1;
+    document.getElementById('wheel-spin-btn').disabled = false;
+  });
+
+  // ════════════════════════════════════════════════════════════════
+  // FEATURE 2 — EXPORT SUMMARY AS IMAGE
+  // ════════════════════════════════════════════════════════════════
+
+  function exportSummaryImage() {
+    const activeSub = document.querySelector('.sub-nav-btn.active')?.dataset.subtab || 'weekly';
+    const profile   = Store.get('vitaLog_profile');
+    const target    = profile?.calorieTarget || 2000;
+    const history   = Store.get('vitaLog_history') || {};
+    const today     = new Date();
+    let title = '', dateLabel = '', lines = [];
+
+    if (activeSub === 'weekly') {
+      title = 'WEEKLY SUMMARY';
+      let totalCals = 0, totalBurn = 0, days = 0;
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        const key  = d.toISOString().split('T')[0];
+        const data = i === 0 ? buildTodaySnapshot() : history[key];
+        if (data && data.calories > 0) { totalCals += data.calories; totalBurn += (data.workoutKcal || 0); days++; }
+      }
+      const avgCals = days ? Math.round(totalCals / days) : 0;
+      const d0 = new Date(); d0.setDate(d0.getDate() - 6);
+      dateLabel = `${d0.toLocaleDateString('en-US', {month:'short', day:'numeric'})} – ${today.toLocaleDateString('en-US', {month:'short', day:'numeric'})}`;
+      const totalDef = days ? target * days - totalCals : 0;
+      lines = [
+        ['Days Logged',          `${days} / 7`],
+        ['Avg Calories / Day',   avgCals ? `${avgCals} kcal` : '—'],
+        ['vs Target / Day',      avgCals ? `${avgCals > target ? '+' : '-'}${Math.abs(avgCals - target)} kcal` : '—'],
+        ['Weekly Deficit / Surplus', totalDef ? `${totalDef > 0 ? '-' : '+'}${Math.abs(Math.round(totalDef))} kcal` : '—'],
+        ['Total Workout Burn',   `${totalBurn} kcal`],
+      ];
+    } else if (activeSub === 'monthly') {
+      title = 'MONTHLY SUMMARY';
+      dateLabel = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const pfx = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+      const dim = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      let totalCals = 0, totalBurn = 0, days = 0;
+      for (let d = 1; d <= dim; d++) {
+        const key  = `${pfx}-${String(d).padStart(2, '0')}`;
+        const data = key === today.toISOString().split('T')[0] ? buildTodaySnapshot() : history[key];
+        if (data && data.calories > 0) { totalCals += data.calories; totalBurn += (data.workoutKcal || 0); days++; }
+      }
+      const avgCals  = days ? Math.round(totalCals / days) : 0;
+      const totalDef = days ? target * days - totalCals : 0;
+      lines = [
+        ['Days Logged',           `${days} / ${dim}`],
+        ['Avg Calories / Day',    avgCals ? `${avgCals} kcal` : '—'],
+        ['vs Target',             avgCals ? `${avgCals > target ? '+' : '-'}${Math.abs(avgCals - target)} kcal` : '—'],
+        ['Monthly Deficit / Surplus', totalDef ? `${totalDef > 0 ? '-' : '+'}${Math.abs(Math.round(totalDef))} kcal` : '—'],
+        ['Total Workout Burn',    `${totalBurn} kcal`],
+      ];
+    } else {
+      title = 'YEARLY SUMMARY';
+      dateLabel = String(today.getFullYear());
+      const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      let totalCals = 0, totalBurn = 0, totalDays = 0, months = 0;
+      MONTHS.forEach((_, mi) => {
+        const ms  = String(mi + 1).padStart(2, '0');
+        const dim = new Date(today.getFullYear(), mi + 1, 0).getDate();
+        let mCals = 0, mBurn = 0, mDays = 0;
+        for (let d = 1; d <= dim; d++) {
+          const key  = `${today.getFullYear()}-${ms}-${String(d).padStart(2, '0')}`;
+          const data = key === today.toISOString().split('T')[0] ? buildTodaySnapshot() : history[key];
+          if (data && data.calories > 0) { mCals += data.calories; mBurn += (data.workoutKcal || 0); mDays++; }
+        }
+        if (mDays > 0) { totalCals += mCals; totalBurn += mBurn; totalDays += mDays; months++; }
+      });
+      const avgCals = totalDays ? Math.round(totalCals / totalDays) : 0;
+      lines = [
+        ['Months Active',      `${months} / 12`],
+        ['Avg Daily Calories', avgCals ? `${avgCals} kcal` : '—'],
+        ['Total Calories',     totalCals ? `${totalCals.toLocaleString()} kcal` : '—'],
+        ['Total Workout Burn', totalBurn ? `${totalBurn.toLocaleString()} kcal` : '0 kcal'],
+      ];
+    }
+
+    const W  = 360;
+    const H  = 160 + lines.length * 54 + 44;
+    const sc = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width  = W * sc;
+    canvas.height = H * sc;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(sc, sc);
+
+    ctx.fillStyle = '#0f0f0f';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = '#c8f135';
+    ctx.fillRect(0, 0, W, 4);
+
+    ctx.fillStyle = '#c8f135';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.fillText('VitaLog', 24, 18);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(title, 24, 54);
+
+    ctx.fillStyle = '#777';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(dateLabel, 24, 72);
+
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(24, 96);
+    ctx.lineTo(W - 24, 96);
+    ctx.stroke();
+
+    lines.forEach(([label, value], i) => {
+      const rowY = 108 + i * 54;
+      ctx.fillStyle = i % 2 === 0 ? '#161616' : '#111111';
+      ctx.beginPath();
+      ctx.rect(16, rowY, W - 32, 46);
+      ctx.fill();
+      ctx.fillStyle = '#666';
+      ctx.font = '11px sans-serif';
+      ctx.textBaseline = 'top';
+      ctx.fillText(label.toUpperCase(), 28, rowY + 8);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillText(value, 28, rowY + 26);
+    });
+
+    const footY = 108 + lines.length * 54 + 14;
+    ctx.fillStyle = '#333';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(`Generated by VitaLog · ${today.toLocaleDateString()}`, 24, footY);
+
+    const fname = `vitalog-${activeSub}-${today.toISOString().split('T')[0]}.png`;
+    canvas.toBlob(blob => {
+      const file = new File([blob], fname, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: `VitaLog ${title}` })
+          .catch(() => dlCanvas(canvas, fname));
+      } else {
+        dlCanvas(canvas, fname);
+      }
+    });
+  }
+
+  function dlCanvas(canvas, fname) {
+    const a = document.createElement('a');
+    a.download = fname;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  }
+
+  document.getElementById('export-summary-btn').addEventListener('click', exportSummaryImage);
 
   // ════════════════════════════════════════════════════════════════
   // AI CHAT
