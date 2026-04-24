@@ -1471,6 +1471,13 @@ If asked about calories or macros, give practical, actionable advice.`;
     try {
       await auth.createUserWithEmailAndPassword(email, pass);
       await pushLocalToFirestore();
+      await auth.signOut();
+      // Pre-fill email on sign-in form and redirect there
+      document.getElementById('auth-email').value = email;
+      document.getElementById('auth-password').value = '';
+      document.getElementById('auth-error').textContent = '';
+      showAuthSection('auth-login');
+      showToast('Account created! Please sign in.');
     } catch (e) {
       document.getElementById('auth-signup-btn').disabled = false;
       err.textContent = getAuthError(e.code);
