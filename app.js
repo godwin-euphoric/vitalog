@@ -226,18 +226,27 @@ document.addEventListener('DOMContentLoaded', () => {
       banner.classList.add('hidden');
     }
 
-    // Feature 3: home background tint (food intake only, not net)
-    const homeEl    = document.getElementById('tab-home');
+    // Today strip update
+    const stripDate = new Date();
+    document.getElementById('strip-date').textContent  = stripDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    document.getElementById('strip-eaten').textContent = Math.round(totalCals);
+    document.getElementById('strip-burnt').textContent = Math.round(totalBurnt);
+    const macroTotalG = totalProtein + totalCarbs + totalFat + totalFibre;
+    document.getElementById('strip-protein-pct').textContent = macroTotalG ? pct(totalProtein, macroTotalG) + '%' : '0%';
+    document.getElementById('strip-carbs-pct').textContent   = macroTotalG ? pct(totalCarbs,   macroTotalG) + '%' : '0%';
+    document.getElementById('strip-fat-pct').textContent     = macroTotalG ? pct(totalFat,     macroTotalG) + '%' : '0%';
+    document.getElementById('strip-fibre-pct').textContent   = macroTotalG ? pct(totalFibre,   macroTotalG) + '%' : '0%';
+
+    // Strip warning (food intake only — replaces full-screen red)
+    const stripEl   = document.getElementById('today-strip');
     const foodRatio = totalCals / target;
     const newLevel  = foodRatio >= 1 ? 2 : foodRatio >= 0.75 ? 1 : 0;
     if (newLevel !== calorieWarningLevel) {
-      homeEl.classList.remove('calorie-warn', 'calorie-danger-bg');
-      if (newLevel === 2) {
-        homeEl.classList.add('calorie-danger-bg');
-        navigator.vibrate?.([200, 100, 200, 100, 200]);
-      } else if (newLevel === 1) {
-        homeEl.classList.add('calorie-warn');
-        navigator.vibrate?.(300);
+      if (newLevel >= 1) {
+        stripEl.classList.add('strip-warn');
+        navigator.vibrate?.(newLevel === 2 ? [200, 100, 200, 100, 200] : 300);
+      } else {
+        stripEl.classList.remove('strip-warn');
       }
       calorieWarningLevel = newLevel;
     }
@@ -1320,6 +1329,137 @@ Use null for any value you are unsure about. Estimate reasonable values where po
   }
 
   document.getElementById('export-summary-btn').addEventListener('click', exportSummaryImage);
+
+  // ════════════════════════════════════════════════════════════════
+  // TODAY STRIP — SHARE BUTTON
+  // ════════════════════════════════════════════════════════════════
+
+  function shareTodaySummary() {
+    const profile  = Store.get('vitaLog_profile');
+    const target   = profile?.calorieTarget || 2000;
+    const eaten    = parseInt(document.getElementById('strip-eaten').textContent, 10) || 0;
+    const burnt    = parseInt(document.getElementById('strip-burnt').textContent, 10) || 0;
+    const net      = eaten - burnt;
+    const pProtein = document.getElementById('strip-protein-pct').textContent;
+    const pCarbs   = document.getElementById('strip-carbs-pct').textContent;
+    const pFat     = document.getElementById('strip-fat-pct').textContent;
+    const pFibre   = document.getElementById('strip-fibre-pct').textContent;
+    const dateStr  = document.getElementById('strip-date').textContent;
+    const surplus  = net - target;
+    const surplusStr = surplus >= 0 ? `+${surplus} kcal surplus` : `${Math.abs(surplus)} kcal deficit`;
+
+    // Build canvas image for sharing
+    const W = 600, H = 320;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Background
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, '#0d0d0d');
+    bg.addColorStop(1, '#1a0000');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Border
+    ctx.strokeStyle = 'rgba(200, 241, 53, 0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(1, 1, W - 2, H - 2);
+
+    // Brand
+    ctx.font = 'bold 22px system-ui, sans-serif';
+    ctx.fillStyle = '#c8f135';
+    ctx.fillText('VitaLog', 30, 46);
+    ctx.font = '14px system-ui, sans-serif';
+    ctx.fillStyle = '#888';
+    ctx.fillText('Daily Summary', 30, 66);
+
+    // Date
+    ctx.font = '14px system-ui, sans-serif';
+    ctx.fillStyle = '#aaa';
+    ctx.textAlign = 'right';
+    ctx.fillText(dateStr, W - 30, 46);
+    ctx.textAlign = 'left';
+
+    // Divider
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(30, 82); ctx.lineTo(W - 30, 82); ctx.stroke();
+
+    // Calorie stats
+    const cols = [
+      { label: 'Eaten', value: `${eaten} kcal`, x: 30 },
+      { label: 'Burnt', value: `${burnt} kcal`, x: 190 },
+      { label: 'Net', value: `${net} kcal`, x: 350 },
+    ];
+    cols.forEach(c => {
+      ctx.font = 'bold 28px system-ui, sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(c.value, c.x, 130);
+      ctx.font = '13px system-ui, sans-serif';
+      ctx.fillStyle = '#666';
+      ctx.fillText(c.label, c.x, 150);
+    });
+
+    // Target + surplus
+    ctx.font = '13px system-ui, sans-serif';
+    ctx.fillStyle = '#555';
+    ctx.fillText(`Target: ${target} kcal  ·  ${surplusStr}`, 30, 178);
+
+    // Divider
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.beginPath(); ctx.moveTo(30, 196); ctx.lineTo(W - 30, 196); ctx.stroke();
+
+    // Macro bar
+    const macros = [
+      { label: 'Protein', pct: pProtein, color: '#4ade80' },
+      { label: 'Carbs',   pct: pCarbs,   color: '#60a5fa' },
+      { label: 'Fat',     pct: pFat,     color: '#f97316' },
+      { label: 'Fibre',   pct: pFibre,   color: '#a78bfa' },
+    ];
+    const barX = 30, barY = 218, barW = W - 60, barH = 14;
+    let cx2 = barX;
+    macros.forEach(m => {
+      const w = (parseFloat(m.pct) / 100) * barW;
+      ctx.fillStyle = m.color;
+      ctx.fillRect(cx2, barY, w, barH);
+      cx2 += w;
+    });
+
+    // Macro legend
+    macros.forEach((m, i) => {
+      const lx = 30 + i * 140;
+      ctx.fillStyle = m.color;
+      ctx.fillRect(lx, 248, 10, 10);
+      ctx.font = '13px system-ui, sans-serif';
+      ctx.fillStyle = '#aaa';
+      ctx.fillText(`${m.label} ${m.pct}`, lx + 14, 258);
+    });
+
+    // Footer
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.fillStyle = '#444';
+    ctx.textAlign = 'right';
+    ctx.fillText('Made with VitaLog · Track smarter, live better', W - 30, H - 18);
+    ctx.textAlign = 'left';
+
+    const fname = `vitalog-today-${new Date().toISOString().slice(0, 10)}.png`;
+    canvas.toBlob(blob => {
+      const file = new File([blob], fname, { type: 'image/png' });
+      const text = `My VitaLog Daily Summary\n📅 ${dateStr}\n🍽️ Eaten: ${eaten} kcal  🔥 Burnt: ${burnt} kcal\n📊 Net: ${net} kcal  (${surplusStr})\n💪 Protein ${pProtein}  Carbs ${pCarbs}  Fat ${pFat}  Fibre ${pFibre}`;
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: 'VitaLog Daily Summary', text })
+          .catch(() => dlCanvas(canvas, fname));
+      } else if (navigator.share) {
+        navigator.share({ title: 'VitaLog Daily Summary', text })
+          .catch(() => dlCanvas(canvas, fname));
+      } else {
+        dlCanvas(canvas, fname);
+      }
+    });
+  }
+
+  document.getElementById('strip-share-btn').addEventListener('click', shareTodaySummary);
 
   // ════════════════════════════════════════════════════════════════
   // AI CHAT
