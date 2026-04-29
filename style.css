@@ -49,7 +49,7 @@ body {
 .tab-panel.active { display: block; }
 
 /* ─── PAGE HEADER ────────────────────────────────────────────────── */
-.page-header { padding: 20px 0 20px; display: flex; align-items: center; justify-content: space-between; }
+.page-header { padding: 12px 0 8px; display: flex; align-items: center; justify-content: space-between; }
 .page-header h1 {
   font-family: 'Bebas Neue', sans-serif;
   font-size: 34px;
@@ -241,7 +241,7 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .ring-wrap {
@@ -357,11 +357,11 @@ body {
    FOOD LOGGING
    ════════════════════════════════════════════════════════════════════ */
 
-.home-section { margin-bottom: 16px; }
+.home-section { margin-bottom: 6px; }
 
 .section-title {
   font-size: 11px; font-weight: 700; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px;
+  text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px;
 }
 
 /* ─── Input bar ──────────────────────────────────────────────────── */
@@ -445,7 +445,7 @@ body {
 /* ─── Empty state ────────────────────────────────────────────────── */
 .empty-log {
   text-align: center; color: var(--text-muted);
-  font-size: 14px; padding: 28px 0;
+  font-size: 13px; padding: 10px 0;
 }
 .empty-log.hidden { display: none; }
 
@@ -886,8 +886,8 @@ body {
   background: var(--bg-card);
   border: 1px solid #1e1e1e;
   border-radius: var(--radius);
-  padding: 14px 14px 10px;
-  margin-bottom: 16px;
+  padding: 10px 12px 8px;
+  margin-bottom: 10px;
   transition: background 0.6s ease, border-color 0.6s ease;
 }
 .dashboard-card.card-warn {
@@ -899,7 +899,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .dashboard-card-date {
