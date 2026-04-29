@@ -226,27 +226,19 @@ document.addEventListener('DOMContentLoaded', () => {
       banner.classList.add('hidden');
     }
 
-    // Today strip update
-    const stripDate = new Date();
-    document.getElementById('strip-date').textContent  = stripDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    document.getElementById('strip-eaten').textContent = Math.round(totalCals);
-    document.getElementById('strip-burnt').textContent = Math.round(totalBurnt);
-    const macroTotalG = totalProtein + totalCarbs + totalFat + totalFibre;
-    document.getElementById('strip-protein-pct').textContent = macroTotalG ? pct(totalProtein, macroTotalG) + '%' : '0%';
-    document.getElementById('strip-carbs-pct').textContent   = macroTotalG ? pct(totalCarbs,   macroTotalG) + '%' : '0%';
-    document.getElementById('strip-fat-pct').textContent     = macroTotalG ? pct(totalFat,     macroTotalG) + '%' : '0%';
-    document.getElementById('strip-fibre-pct').textContent   = macroTotalG ? pct(totalFibre,   macroTotalG) + '%' : '0%';
+    // Dashboard card date
+    document.getElementById('dashboard-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-    // Strip warning (food intake only — replaces full-screen red)
-    const stripEl   = document.getElementById('today-strip');
+    // Dashboard card warning (red tint on whole card)
+    const cardEl    = document.getElementById('dashboard-card');
     const foodRatio = totalCals / target;
     const newLevel  = foodRatio >= 1 ? 2 : foodRatio >= 0.75 ? 1 : 0;
     if (newLevel !== calorieWarningLevel) {
       if (newLevel >= 1) {
-        stripEl.classList.add('strip-warn');
+        cardEl.classList.add('card-warn');
         navigator.vibrate?.(newLevel === 2 ? [200, 100, 200, 100, 200] : 300);
       } else {
-        stripEl.classList.remove('strip-warn');
+        cardEl.classList.remove('card-warn');
       }
       calorieWarningLevel = newLevel;
     }
@@ -1331,20 +1323,25 @@ Use null for any value you are unsure about. Estimate reasonable values where po
   document.getElementById('export-summary-btn').addEventListener('click', exportSummaryImage);
 
   // ════════════════════════════════════════════════════════════════
-  // TODAY STRIP — SHARE BUTTON
+  // DASHBOARD CARD — SHARE BUTTON
   // ════════════════════════════════════════════════════════════════
 
   function shareTodaySummary() {
     const profile  = Store.get('vitaLog_profile');
     const target   = profile?.calorieTarget || 2000;
-    const eaten    = parseInt(document.getElementById('strip-eaten').textContent, 10) || 0;
-    const burnt    = parseInt(document.getElementById('strip-burnt').textContent, 10) || 0;
+    const eaten    = parseInt(document.getElementById('net-consumed').textContent, 10) || 0;
+    const burnt    = parseInt(document.getElementById('net-burnt').textContent, 10) || 0;
     const net      = eaten - burnt;
-    const pProtein = document.getElementById('strip-protein-pct').textContent;
-    const pCarbs   = document.getElementById('strip-carbs-pct').textContent;
-    const pFat     = document.getElementById('strip-fat-pct').textContent;
-    const pFibre   = document.getElementById('strip-fibre-pct').textContent;
-    const dateStr  = document.getElementById('strip-date').textContent;
+    const macroTotalG = (todayData?.foods || []).reduce((s, f) => s + (f.protein || 0) + (f.carbs || 0) + (f.fat || 0) + (f.fibre || 0), 0);
+    const tP = (todayData?.foods || []).reduce((s, f) => s + (f.protein || 0), 0);
+    const tC = (todayData?.foods || []).reduce((s, f) => s + (f.carbs   || 0), 0);
+    const tF = (todayData?.foods || []).reduce((s, f) => s + (f.fat     || 0), 0);
+    const tFi= (todayData?.foods || []).reduce((s, f) => s + (f.fibre   || 0), 0);
+    const pProtein = macroTotalG ? pct(tP,  macroTotalG) + '%' : '0%';
+    const pCarbs   = macroTotalG ? pct(tC,  macroTotalG) + '%' : '0%';
+    const pFat     = macroTotalG ? pct(tF,  macroTotalG) + '%' : '0%';
+    const pFibre   = macroTotalG ? pct(tFi, macroTotalG) + '%' : '0%';
+    const dateStr  = document.getElementById('dashboard-date').textContent;
     const surplus  = net - target;
     const surplusStr = surplus >= 0 ? `+${surplus} kcal surplus` : `${Math.abs(surplus)} kcal deficit`;
 
@@ -1459,7 +1456,7 @@ Use null for any value you are unsure about. Estimate reasonable values where po
     });
   }
 
-  document.getElementById('strip-share-btn').addEventListener('click', shareTodaySummary);
+  document.getElementById('dashboard-share-btn').addEventListener('click', shareTodaySummary);
 
   // ════════════════════════════════════════════════════════════════
   // AI CHAT

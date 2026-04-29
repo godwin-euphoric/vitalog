@@ -193,84 +193,73 @@
 
         <!-- ── DAILY DASHBOARD ──────────────────────────────────── -->
 
-        <!-- Today strip -->
-        <div class="today-strip" id="today-strip">
-          <div class="today-strip-info">
-            <span class="today-strip-date" id="strip-date"></span>
-            <div class="today-strip-stats">
-              <span><b id="strip-eaten">0</b> <small>kcal eaten</small></span>
-              <span class="strip-dot">·</span>
-              <span><b id="strip-burnt">0</b> <small>burnt</small></span>
-            </div>
-            <div class="today-strip-macros">
-              <span>P <b id="strip-protein-pct">0%</b></span>
-              <span>C <b id="strip-carbs-pct">0%</b></span>
-              <span>F <b id="strip-fat-pct">0%</b></span>
-              <span>Fi <b id="strip-fibre-pct">0%</b></span>
-            </div>
-          </div>
-          <button class="strip-share-btn" id="strip-share-btn" aria-label="Share today's summary">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Warning banner: shown at 75% and 100% -->
-        <div class="warning-banner hidden" id="warning-banner">
-          <span id="warning-text"></span>
-        </div>
-
-        <!-- Calorie ring + center text -->
-        <div class="ring-section">
-          <div class="ring-wrap">
-            <svg class="ring-svg" viewBox="0 0 120 120">
-              <circle class="ring-bg"       cx="60" cy="60" r="52"/>
-              <circle class="ring-progress" cx="60" cy="60" r="52" id="calorie-ring"/>
-            </svg>
-            <div class="ring-center">
-              <span class="ring-consumed" id="ring-consumed">0</span>
-              <small>of <span id="ring-target">—</span> kcal</small>
-            </div>
+        <div class="dashboard-card" id="dashboard-card">
+          <!-- Card header: date + share button -->
+          <div class="dashboard-card-header">
+            <span class="dashboard-card-date" id="dashboard-date"></span>
+            <button class="dash-share-btn" id="dashboard-share-btn" aria-label="Share today's summary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </button>
           </div>
 
-          <!-- Net calories card beside the ring -->
-          <div class="net-card">
-            <div class="net-row">
-              <span class="net-label">Consumed</span>
-              <span class="net-value" id="net-consumed">0</span>
-            </div>
-            <div class="net-row">
-              <span class="net-label">Burnt</span>
-              <span class="net-value accent" id="net-burnt">0</span>
-            </div>
-            <div class="net-divider"></div>
-            <div class="net-row">
-              <span class="net-label">Net</span>
-              <span class="net-value" id="net-total">0</span>
-            </div>
+          <!-- Warning banner: shown at 75% and 100% -->
+          <div class="warning-banner hidden" id="warning-banner">
+            <span id="warning-text"></span>
           </div>
-        </div>
 
-        <!-- Macro pills row -->
-        <div class="dash-macros">
-          <div class="dash-macro-pill">
-            <span id="dash-protein">0g</span>
-            <small>Protein</small>
+          <!-- Calorie ring + center text -->
+          <div class="ring-section">
+            <div class="ring-wrap">
+              <svg class="ring-svg" viewBox="0 0 120 120">
+                <circle class="ring-bg"       cx="60" cy="60" r="52"/>
+                <circle class="ring-progress" cx="60" cy="60" r="52" id="calorie-ring"/>
+              </svg>
+              <div class="ring-center">
+                <span class="ring-consumed" id="ring-consumed">0</span>
+                <small>of <span id="ring-target">—</span> kcal</small>
+              </div>
+            </div>
+
+            <!-- Net calories card beside the ring -->
+            <div class="net-card">
+              <div class="net-row">
+                <span class="net-label">Consumed</span>
+                <span class="net-value" id="net-consumed">0</span>
+              </div>
+              <div class="net-row">
+                <span class="net-label">Burnt</span>
+                <span class="net-value accent" id="net-burnt">0</span>
+              </div>
+              <div class="net-divider"></div>
+              <div class="net-row">
+                <span class="net-label">Net</span>
+                <span class="net-value" id="net-total">0</span>
+              </div>
+            </div>
           </div>
-          <div class="dash-macro-pill">
-            <span id="dash-carbs">0g</span>
-            <small>Carbs</small>
-          </div>
-          <div class="dash-macro-pill">
-            <span id="dash-fat">0g</span>
-            <small>Fat</small>
-          </div>
-          <div class="dash-macro-pill">
-            <span id="dash-fibre">0g</span>
-            <small>Fibre</small>
+
+          <!-- Macro pills row -->
+          <div class="dash-macros">
+            <div class="dash-macro-pill">
+              <span id="dash-protein">0g</span>
+              <small>Protein</small>
+            </div>
+            <div class="dash-macro-pill">
+              <span id="dash-carbs">0g</span>
+              <small>Carbs</small>
+            </div>
+            <div class="dash-macro-pill">
+              <span id="dash-fat">0g</span>
+              <small>Fat</small>
+            </div>
+            <div class="dash-macro-pill">
+              <span id="dash-fibre">0g</span>
+              <small>Fibre</small>
+            </div>
           </div>
         </div>
 

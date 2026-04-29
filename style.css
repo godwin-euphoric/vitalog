@@ -327,7 +327,7 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 4px;
 }
 
 .dash-macro-pill {
@@ -880,62 +880,47 @@ body {
 .export-btn:active { background: #1a1a1a; }
 
 /* ════════════════════════════════════════════════════════════════════
-   TODAY STRIP
+   DASHBOARD CARD
    ════════════════════════════════════════════════════════════════════ */
 
-.today-strip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.dashboard-card {
   background: var(--bg-card);
   border: 1px solid #1e1e1e;
   border-radius: var(--radius);
-  padding: 12px 14px;
-  margin-bottom: 14px;
+  padding: 14px 14px 10px;
+  margin-bottom: 16px;
   transition: background 0.6s ease, border-color 0.6s ease;
 }
-.today-strip.strip-warn {
+.dashboard-card.card-warn {
   background: rgba(60, 0, 0, 0.55);
   border-color: rgba(180, 0, 0, 0.5);
 }
 
-.today-strip-info { flex: 1; }
+.dashboard-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
 
-.today-strip-date {
-  display: block;
+.dashboard-card-date {
   font-size: 11px;
   font-weight: 700;
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  margin-bottom: 5px;
 }
-.today-strip.strip-warn .today-strip-date { color: #ff6b6b; }
+.dashboard-card.card-warn .dashboard-card-date { color: #ff6b6b; }
 
-.today-strip-stats {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
-}
-.today-strip-stats b { font-size: 15px; font-weight: 700; color: var(--text); }
-.today-strip-stats small { font-size: 11px; color: var(--text-muted); }
-.strip-dot { color: #444; font-size: 12px; }
-
-.today-strip-macros { display: flex; gap: 10px; flex-wrap: wrap; }
-.today-strip-macros span { font-size: 11px; color: var(--text-muted); }
-.today-strip-macros b { font-size: 12px; font-weight: 700; color: var(--text); }
-
-.strip-share-btn {
+.dash-share-btn {
   background: none;
   border: 1px solid #2a2a2a;
   border-radius: var(--radius-sm);
   color: var(--text-muted);
-  width: 42px; height: 42px;
+  width: 36px; height: 36px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0;
   transition: color 0.15s, border-color 0.15s;
 }
-.strip-share-btn svg { width: 18px; height: 18px; }
-.strip-share-btn:active { color: var(--accent); border-color: var(--accent); }
+.dash-share-btn svg { width: 16px; height: 16px; }
+.dash-share-btn:active { color: var(--accent); border-color: var(--accent); }
