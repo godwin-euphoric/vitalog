@@ -1656,7 +1656,6 @@ If asked about calories or macros, give practical, actionable advice.`;
   auth.onAuthStateChanged(async (user) => {
     if (user) {
       document.getElementById('auth-modal').classList.add('hidden');
-      showToast('Syncing your data...');
       await loadFromFirestore();
       bootApp();
     } else {
