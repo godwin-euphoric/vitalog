@@ -141,18 +141,38 @@ document.addEventListener('DOMContentLoaded', () => {
     showStep('step-apikey');
   });
 
+  let onboardProvider = 'gemini';
+
+  function setOnboardProvider(prov) {
+    onboardProvider = prov;
+    document.getElementById('onboard-prov-gemini').classList.toggle('active', prov === 'gemini');
+    document.getElementById('onboard-prov-openai').classList.toggle('active', prov === 'openai');
+    const sel = document.getElementById('onboard-model');
+    sel.innerHTML = MODELS[prov].map((m, i) => `<option value="${m}">${m}${i === 0 ? ' (recommended)' : ''}</option>`).join('');
+    const link = API_LINKS[prov];
+    document.getElementById('onboard-key-link').innerHTML =
+      `<a href="${link.href}" target="_blank" rel="noopener">${link.text}</a>`;
+  }
+
+  document.getElementById('onboard-prov-gemini').addEventListener('click', () => setOnboardProvider('gemini'));
+  document.getElementById('onboard-prov-openai').addEventListener('click', () => setOnboardProvider('openai'));
+
   document.getElementById('btn-finish-setup').addEventListener('click', () => {
-    const key = document.getElementById('input-apikey').value.trim();
-    const err = document.getElementById('error-apikey');
-    if (!key) { err.textContent = 'Please enter your Gemini API key.'; return; }
+    const key   = document.getElementById('input-apikey').value.trim();
+    const model = document.getElementById('onboard-model').value;
+    const err   = document.getElementById('error-apikey');
+    if (!key) { err.textContent = 'Please enter your API key.'; return; }
     err.textContent = '';
-    Store.setRaw('vitaLog_apiKey', key);
+    const keyStore = onboardProvider === 'openai' ? 'vitaLog_openaiKey' : 'vitaLog_geminiKey';
+    Store.setRaw(keyStore, key);
+    Store.setRaw('vitaLog_provider', onboardProvider);
+    Store.setRaw('vitaLog_model', model);
     Store.set('vitaLog_profile', tempProfile);
     Store.setRaw('vitaLog_onboarded', 'true');
     document.getElementById('display-calories').textContent = tempProfile.calorieTarget;
     showStep('step-done');
     fsSet('profile', tempProfile).catch(() => {});
-    fsSet('settings', { apiKey: key }).catch(() => {});
+    fsSet('settings', { provider: onboardProvider, model }).catch(() => {});
   });
 
   document.getElementById('btn-start-tracking').addEventListener('click', () => {
@@ -559,30 +579,56 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ════════════════════════════════════════════════════════════════
-  // GEMINI API
+  // PROVIDER CONFIG
   // ════════════════════════════════════════════════════════════════
 
-  async function callGemini(prompt, jsonMode = true) {
-    const apiKey = Store.raw('vitaLog_apiKey');
-    if (!apiKey) throw new Error('NO_KEY');
+  const MODELS = {
+    gemini: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'],
+    openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo'],
+  };
+  const API_LINKS = {
+    gemini: { href: 'https://aistudio.google.com/app/apikey',   text: 'Get a free key at Google AI Studio →' },
+    openai: { href: 'https://platform.openai.com/api-keys',     text: 'Get a key at OpenAI Platform →' },
+  };
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const EYE_OPEN_SVG   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const EYE_CLOSED_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 
-    const body = {
-      contents: [{ parts: [{ text: prompt }] }],
-    };
-    if (jsonMode) {
-      body.generationConfig = { responseMimeType: 'application/json' };
+  // ════════════════════════════════════════════════════════════════
+  // AI API
+  // ════════════════════════════════════════════════════════════════
+
+  async function callAI(prompt, jsonMode = true) {
+    const provider = Store.raw('vitaLog_provider') || 'gemini';
+    const model    = Store.raw('vitaLog_model') || (provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash');
+
+    if (provider === 'openai') {
+      const apiKey = Store.raw('vitaLog_openaiKey');
+      if (!apiKey) throw new Error('NO_KEY');
+      const body = { model, messages: [{ role: 'user', content: prompt }] };
+      if (jsonMode) body.response_format = { type: 'json_object' };
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error(`HTTP_${response.status}`);
+      const data = await response.json();
+      return data.choices[0].message.content;
     }
 
+    // Gemini (default)
+    const apiKey = Store.raw('vitaLog_geminiKey') || Store.raw('vitaLog_apiKey');
+    if (!apiKey) throw new Error('NO_KEY');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const body = { contents: [{ parts: [{ text: prompt }] }] };
+    if (jsonMode) body.generationConfig = { responseMimeType: 'application/json' };
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-
     if (!response.ok) throw new Error(`HTTP_${response.status}`);
-
     const data = await response.json();
     return data.candidates[0].content.parts[0].text;
   }
@@ -594,28 +640,30 @@ document.addEventListener('DOMContentLoaded', () => {
   async function logFood(userInput) {
     showFoodLoading(true);
 
-    const prompt = `You are a nutrition database. Extract nutrition info for the food described below.
-Food: "${userInput}"
-Return ONLY valid JSON in exactly this format (no explanation, no markdown, just JSON):
+    const prompt = `You are a nutrition database. The user logged: "${userInput}"
+Identify ALL individual food items and return a JSON array. Each item must have these exact fields:
 {"name":"","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"fibre_g":0}
-Use null for any value you are genuinely unsure about. Estimate reasonable values where possible.`;
+Return ONLY a valid JSON array, no markdown, no explanation.
+Example: input "2 eggs and toast with butter" → [{"name":"2 eggs","calories":140,...},{"name":"toast with butter","calories":150,...}]
+Use null for unknown values. Estimate reasonable values where possible.`;
 
     try {
-      const raw  = await callGemini(prompt);
-      const data = JSON.parse(raw);
-
-      const entry = {
-        id:        Date.now(),
-        time:      new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        name:      data.name      || userInput,
-        calories:  data.calories  ?? null,
-        protein_g: data.protein_g ?? null,
-        carbs_g:   data.carbs_g   ?? null,
-        fat_g:     data.fat_g     ?? null,
-        fibre_g:   data.fibre_g   ?? null,
-      };
-
-      todayData.foods.push(entry);
+      const raw    = await callAI(prompt);
+      let   parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) parsed = [parsed];
+      const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      parsed.forEach((data, i) => {
+        todayData.foods.push({
+          id:        Date.now() + i,
+          time:      now,
+          name:      data.name      || userInput,
+          calories:  data.calories  ?? null,
+          protein_g: data.protein_g ?? null,
+          carbs_g:   data.carbs_g   ?? null,
+          fat_g:     data.fat_g     ?? null,
+          fibre_g:   data.fibre_g   ?? null,
+        });
+      });
       saveToday();
       renderFoodLog();
       renderDashboard();
@@ -719,7 +767,7 @@ Return ONLY valid JSON in exactly this format (no explanation, no markdown):
 Use null for any value you are unsure about. Estimate reasonable values where possible.`;
 
     try {
-      const raw  = await callGemini(prompt);
+      const raw  = await callAI(prompt);
       const data = JSON.parse(raw);
 
       const entry = {
@@ -852,11 +900,11 @@ Use null for any value you are unsure about. Estimate reasonable values where po
 
   function getErrorMessage(err) {
     const m = err.message || '';
-    if (m === 'NO_KEY')           return 'No API key found. Please add your Gemini key in Settings.';
+    if (m === 'NO_KEY')           return 'No API key found. Please add your API key in Settings.';
     if (m.includes('HTTP_400'))   return 'Bad request. Check your API key in Settings.';
     if (m.includes('HTTP_401') || m.includes('HTTP_403')) return 'Invalid API key. Please update it in Settings.';
     if (m.includes('HTTP_429'))   return 'Too many requests. Wait a moment and try again.';
-    if (m.includes('HTTP_5'))     return 'Gemini server error. Please try again shortly.';
+    if (m.includes('HTTP_5'))     return 'AI server error. Please try again shortly.';
     if (m.includes('Failed to fetch')) return 'No internet connection.';
     return 'Something went wrong. Please try again.';
   }
@@ -874,11 +922,51 @@ Use null for any value you are unsure about. Estimate reasonable values where po
   // SETTINGS
   // ════════════════════════════════════════════════════════════════
 
-  function initSettings() {
-    const profile = Store.get('vitaLog_profile');
-    const target  = profile?.calorieTarget || '—';
-    document.getElementById('settings-cal-display').textContent = target + ' kcal';
+  let settingsProvider = 'gemini';
+
+  function keyStatusText(prov) {
+    const geminiKey = Store.raw('vitaLog_geminiKey') || Store.raw('vitaLog_apiKey') || '';
+    const openaiKey = Store.raw('vitaLog_openaiKey') || '';
+    const key = prov === 'openai' ? openaiKey : geminiKey;
+    const el  = document.getElementById('settings-key-status');
+    if (key) {
+      el.textContent = `Key saved: ${key.slice(0, 4)}${'•'.repeat(10)}`;
+      el.className = 'key-status set';
+    } else {
+      el.textContent = 'No key saved yet.';
+      el.className = 'key-status';
+    }
   }
+
+  function setSettingsProvider(prov) {
+    settingsProvider = prov;
+    document.getElementById('settings-prov-gemini').classList.toggle('active', prov === 'gemini');
+    document.getElementById('settings-prov-openai').classList.toggle('active', prov === 'openai');
+    document.getElementById('settings-provider-display').textContent = prov === 'openai' ? 'OpenAI' : 'Gemini';
+    const sel = document.getElementById('settings-model-select');
+    const saved = Store.raw('vitaLog_model') || '';
+    sel.innerHTML = MODELS[prov].map((m, i) => `<option value="${m}">${m}${i === 0 ? ' (recommended)' : ''}</option>`).join('');
+    if (MODELS[prov].includes(saved)) sel.value = saved;
+    keyStatusText(prov);
+  }
+
+  function initSettings() {
+    const profile  = Store.get('vitaLog_profile');
+    const target   = profile?.calorieTarget || '—';
+    document.getElementById('settings-cal-display').textContent = target + ' kcal';
+    const prov = Store.raw('vitaLog_provider') || 'gemini';
+    setSettingsProvider(prov);
+  }
+
+  document.getElementById('settings-prov-gemini').addEventListener('click', () => setSettingsProvider('gemini'));
+  document.getElementById('settings-prov-openai').addEventListener('click', () => setSettingsProvider('openai'));
+
+  document.getElementById('settings-key-eye').addEventListener('click', () => {
+    const input   = document.getElementById('settings-key-input');
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    document.getElementById('settings-key-eye').innerHTML = isHidden ? EYE_CLOSED_SVG : EYE_OPEN_SVG;
+  });
 
   document.getElementById('btn-save-calories').addEventListener('click', () => {
     const val = parseInt(document.getElementById('settings-cal-input').value);
@@ -894,11 +982,18 @@ Use null for any value you are unsure about. Estimate reasonable values where po
   });
 
   document.getElementById('btn-save-key').addEventListener('click', () => {
-    const key = document.getElementById('settings-key-input').value.trim();
+    const key   = document.getElementById('settings-key-input').value.trim();
+    const model = document.getElementById('settings-model-select').value;
     if (!key) { showToast('Please paste your API key.'); return; }
-    Store.setRaw('vitaLog_apiKey', key);
-    fsSet('settings', { apiKey: key }).catch(() => {});
+    const keyStore = settingsProvider === 'openai' ? 'vitaLog_openaiKey' : 'vitaLog_geminiKey';
+    Store.setRaw(keyStore, key);
+    Store.setRaw('vitaLog_provider', settingsProvider);
+    Store.setRaw('vitaLog_model', model);
+    fsSet('settings', { provider: settingsProvider, model }).catch(() => {});
     document.getElementById('settings-key-input').value = '';
+    document.getElementById('settings-key-input').type = 'password';
+    document.getElementById('settings-key-eye').innerHTML = EYE_OPEN_SVG;
+    keyStatusText(settingsProvider);
     showToast('API key updated.');
   });
 
@@ -935,7 +1030,8 @@ Use null for any value you are unsure about. Estimate reasonable values where po
 
   document.getElementById('btn-reset-all').addEventListener('click', () => {
     showConfirm('Delete ALL data including history and profile? This cannot be undone.', () => {
-      ['vitaLog_today','vitaLog_history','vitaLog_profile','vitaLog_apiKey','vitaLog_onboarded']
+      ['vitaLog_today','vitaLog_history','vitaLog_profile','vitaLog_apiKey',
+       'vitaLog_geminiKey','vitaLog_openaiKey','vitaLog_provider','vitaLog_model','vitaLog_onboarded']
         .forEach(k => Store.remove(k));
       location.reload();
     });
@@ -1481,7 +1577,7 @@ If asked about calories or macros, give practical, actionable advice.`;
     const prompt = SYSTEM_PROMPT + '\n\nUser: ' + userText;
 
     try {
-      const reply = await callGemini(prompt, false);
+      const reply = await callAI(prompt, false);
       typingBubble.remove();
       appendBubble(reply, 'gemini');
       chatHistory.push({ role: 'model', parts: [{ text: reply }] });

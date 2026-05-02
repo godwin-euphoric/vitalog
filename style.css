@@ -197,6 +197,7 @@ body {
 .onboard-input::-webkit-inner-spin-button { -webkit-appearance: none; }
 .onboard-input:focus { border-color: var(--accent); }
 .onboard-input.full { width: 100%; font-size: 16px; font-weight: 400; }
+select.onboard-input, select.settings-input { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
 
 .input-unit { color: var(--text-muted); font-size: 15px; font-weight: 500; min-width: 28px; }
 .input-error { color: var(--danger); font-size: 13px; min-height: 18px; margin-top: -8px; }
@@ -604,6 +605,28 @@ body {
 .settings-input:focus { border-color: var(--accent); }
 
 .settings-btn { margin-top: 4px; }
+
+.provider-row { display: flex; gap: 10px; margin-bottom: 14px; }
+.provider-btn {
+  flex: 1; background: var(--bg-card-2); border: 1.5px solid #2a2a2a;
+  border-radius: var(--radius-sm); padding: 10px 8px; color: var(--text);
+  cursor: pointer; display: flex; flex-direction: column; align-items: center;
+  gap: 2px; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s;
+}
+.provider-btn span { font-size: 14px; font-weight: 600; }
+.provider-btn small { font-size: 11px; color: var(--text-muted); }
+.provider-btn.active { border-color: var(--accent); background: rgba(200,241,53,0.07); }
+
+.key-input-wrapper { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.key-input-wrapper .settings-input { margin-bottom: 0; }
+.eye-btn {
+  background: #1a1a1a; border: 1.5px solid #2a2a2a; border-radius: var(--radius-sm);
+  padding: 10px 12px; color: var(--text-muted); cursor: pointer; flex-shrink: 0;
+  line-height: 1; transition: border-color 0.15s;
+}
+.eye-btn:hover { border-color: var(--accent); color: var(--text); }
+.key-status { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; min-height: 18px; }
+.key-status.set { color: var(--accent); }
 
 .danger-card { border-color: #2a1010; }
 .settings-danger-label {
