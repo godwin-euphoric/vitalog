@@ -598,7 +598,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // AI API
   // ════════════════════════════════════════════════════════════════
 
-  async function callAI(prompt, jsonMode = true) {
+  async function callAI(prompt, jsonMode = true, retries = 2) {
     const provider = Store.raw('vitaLog_provider') || 'gemini';
     const model    = Store.raw('vitaLog_model') || (provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash');
 
@@ -612,7 +612,13 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
         body: JSON.stringify(body),
       });
-      if (!response.ok) throw new Error(`HTTP_${response.status}`);
+      if (!response.ok) {
+        if (response.status >= 500 && retries > 0) {
+          await new Promise(r => setTimeout(r, 1500));
+          return callAI(prompt, jsonMode, retries - 1);
+        }
+        throw new Error(`HTTP_${response.status}`);
+      }
       const data = await response.json();
       return data.choices[0].message.content;
     }
@@ -628,7 +634,13 @@ document.addEventListener('DOMContentLoaded', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!response.ok) throw new Error(`HTTP_${response.status}`);
+    if (!response.ok) {
+      if (response.status >= 500 && retries > 0) {
+        await new Promise(r => setTimeout(r, 1500));
+        return callAI(prompt, jsonMode, retries - 1);
+      }
+      throw new Error(`HTTP_${response.status}`);
+    }
     const data = await response.json();
     return data.candidates[0].content.parts[0].text;
   }
