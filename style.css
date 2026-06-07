@@ -666,6 +666,16 @@ select.onboard-input, select.settings-input { appearance: none; -webkit-appearan
   cursor: pointer; min-height: 44px;
 }
 
+.error-box { max-width: 380px; text-align: left; }
+.error-modal-title { font-size: 15px; font-weight: 700; color: var(--danger); margin-bottom: 10px; }
+.error-modal-body {
+  font-size: 12px; font-family: monospace;
+  background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 6px;
+  padding: 12px; white-space: pre-wrap; word-break: break-all;
+  color: #ccc; max-height: 220px; overflow-y: auto; margin-bottom: 16px;
+  user-select: text;
+}
+
 /* ════════════════════════════════════════════════════════════════════
    AI CHAT
    ════════════════════════════════════════════════════════════════════ */

@@ -680,7 +680,7 @@ Use null for unknown values. Estimate reasonable values where possible.`;
       renderFoodLog();
       renderDashboard();
     } catch (err) {
-      showToast(getErrorMessage(err));
+      showError(err);
     } finally {
       showFoodLoading(false);
     }
@@ -795,7 +795,7 @@ Use null for any value you are unsure about. Estimate reasonable values where po
       renderWorkoutLog();
       renderDashboard();
     } catch (err) {
-      showToast(getErrorMessage(err));
+      showError(err);
     } finally {
       showWorkoutLoading(false);
     }
@@ -910,14 +910,35 @@ Use null for any value you are unsure about. Estimate reasonable values where po
     toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
   }
 
+  function showError(err) {
+    const provider = Store.raw('vitaLog_provider') || 'gemini';
+    const model    = Store.raw('vitaLog_model') || (provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash');
+    const m        = err.message || String(err);
+    const lines = [
+      `Error:    ${m}`,
+      `Provider: ${provider}`,
+      `Model:    ${model}`,
+      `Time:     ${new Date().toISOString()}`,
+    ];
+    if (err.stack) lines.push(`\nStack:\n${err.stack}`);
+    const detail = lines.join('\n');
+    console.error('[VitaLog error]', err);
+    document.getElementById('error-modal-text').textContent = detail;
+    document.getElementById('error-modal').classList.remove('hidden');
+  }
+
+  document.getElementById('error-copy-btn').addEventListener('click', () => {
+    const text = document.getElementById('error-modal-text').textContent;
+    navigator.clipboard.writeText(text).then(() => showToast('Copied!'));
+  });
+  document.getElementById('error-close-btn').addEventListener('click', () => {
+    document.getElementById('error-modal').classList.add('hidden');
+  });
+
   function getErrorMessage(err) {
     const m = err.message || '';
-    console.error('[VitaLog error]', err);
     if (m === 'NO_KEY')           return 'No API key found. Please add your API key in Settings.';
-    if (m.includes('HTTP_400'))   return `Bad request (400). Check your API key in Settings. Detail: ${m}`;
-    if (m.includes('HTTP_401') || m.includes('HTTP_403')) return `Invalid API key (${m}). Please update it in Settings.`;
     if (m.includes('HTTP_429'))   return 'Too many requests. Wait a moment and try again.';
-    if (m.includes('HTTP_5'))     return `AI server error. Detail: ${m}`;
     if (m.includes('Failed to fetch')) return 'No internet connection.';
     return `Error: ${m || err}`;
   }
