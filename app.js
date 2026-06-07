@@ -900,13 +900,14 @@ Use null for any value you are unsure about. Estimate reasonable values where po
 
   function getErrorMessage(err) {
     const m = err.message || '';
+    console.error('[VitaLog error]', err);
     if (m === 'NO_KEY')           return 'No API key found. Please add your API key in Settings.';
-    if (m.includes('HTTP_400'))   return 'Bad request. Check your API key in Settings.';
-    if (m.includes('HTTP_401') || m.includes('HTTP_403')) return 'Invalid API key. Please update it in Settings.';
+    if (m.includes('HTTP_400'))   return `Bad request (400). Check your API key in Settings. Detail: ${m}`;
+    if (m.includes('HTTP_401') || m.includes('HTTP_403')) return `Invalid API key (${m}). Please update it in Settings.`;
     if (m.includes('HTTP_429'))   return 'Too many requests. Wait a moment and try again.';
-    if (m.includes('HTTP_5'))     return 'AI server error. Please try again shortly.';
+    if (m.includes('HTTP_5'))     return `AI server error. Detail: ${m}`;
     if (m.includes('Failed to fetch')) return 'No internet connection.';
-    return 'Something went wrong. Please try again.';
+    return `Error: ${m || err}`;
   }
 
   function escapeHtml(str) {
