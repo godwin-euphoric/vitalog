@@ -545,7 +545,7 @@ select.onboard-input, select.settings-input { appearance: none; -webkit-appearan
    WORKOUT LOGGING
    ════════════════════════════════════════════════════════════════════ */
 
-.workout-send { background: #2a7de1; }
+.workout-send { background: var(--accent); }
 
 .workout-card {
   background: var(--bg-card);
@@ -677,15 +677,67 @@ select.onboard-input, select.settings-input { appearance: none; -webkit-appearan
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   AI CHAT
+   DATE NAVIGATION
    ════════════════════════════════════════════════════════════════════ */
 
-.tab-panel#tab-chat {
-  display: none;
-  flex-direction: column;
-  padding-bottom: 0;
+.date-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 16px 10px; gap: 12px;
 }
-.tab-panel#tab-chat.active { display: flex; }
+.date-nav-label { flex: 1; text-align: center; font-size: 14px; font-weight: 600; color: var(--text-muted); }
+.date-nav-btn {
+  background: none; border: 1px solid #2a2a2a; color: var(--text-muted);
+  border-radius: 8px; width: 36px; height: 36px; font-size: 20px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.date-nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* ════════════════════════════════════════════════════════════════════
+   EDITABLE FOOD / WORKOUT CARDS
+   ════════════════════════════════════════════════════════════════════ */
+
+.food-name-wrap { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.qty-row { display: flex; align-items: center; gap: 6px; }
+.qty-input {
+  width: 52px; background: #1e1e1e; border: 1px solid #333; border-radius: 6px;
+  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
+  font-weight: 600; padding: 3px 6px; text-align: center;
+}
+.qty-input:focus { outline: none; border-color: var(--accent); }
+.qty-unit { font-size: 12px; color: var(--text-muted); }
+.macro-pill.accent span { color: var(--accent); }
+
+/* ════════════════════════════════════════════════════════════════════
+   DASHBOARD TABLES
+   ════════════════════════════════════════════════════════════════════ */
+
+.dash-table { margin-top: 16px; }
+.dash-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.dash-tbl th { color: var(--text-muted); font-weight: 600; text-align: left; padding: 6px 8px; border-bottom: 1px solid #1e1e1e; }
+.dash-tbl td { padding: 7px 8px; border-bottom: 1px solid #141414; color: var(--text); }
+.dash-tbl tr.tbl-empty td { color: #444; }
+.tbl-tag { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+.tbl-deficit { background: rgba(200,241,53,0.15); color: var(--accent); }
+.tbl-surplus { background: rgba(255,59,48,0.15); color: var(--danger); }
+
+/* ════════════════════════════════════════════════════════════════════
+   PAST DAY SUMMARY (date nav read-only view)
+   ════════════════════════════════════════════════════════════════════ */
+
+.past-day-summary {
+  display: flex; flex-direction: column; align-items: center;
+  background: var(--bg-card); border-radius: var(--radius);
+  padding: 20px; margin: 0 16px 8px; text-align: center;
+}
+.past-day-summary span { font-size: 28px; font-weight: 700; color: var(--accent); }
+.past-day-summary small { color: var(--text-muted); font-size: 12px; }
+.past-day-row {
+  display: flex; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid #141414;
+  font-size: 14px; color: var(--text-muted);
+}
+.past-day-row span:last-child { color: var(--text); font-weight: 600; }
 
 .chat-messages {
   flex: 1;

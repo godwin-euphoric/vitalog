@@ -141,38 +141,19 @@ document.addEventListener('DOMContentLoaded', () => {
     showStep('step-apikey');
   });
 
-  let onboardProvider = 'gemini';
-
-  function setOnboardProvider(prov) {
-    onboardProvider = prov;
-    document.getElementById('onboard-prov-gemini').classList.toggle('active', prov === 'gemini');
-    document.getElementById('onboard-prov-openai').classList.toggle('active', prov === 'openai');
-    const sel = document.getElementById('onboard-model');
-    sel.innerHTML = MODELS[prov].map((m, i) => `<option value="${m}">${m}${i === 0 ? ' (recommended)' : ''}</option>`).join('');
-    const link = API_LINKS[prov];
-    document.getElementById('onboard-key-link').innerHTML =
-      `<a href="${link.href}" target="_blank" rel="noopener">${link.text}</a>`;
-  }
-
-  document.getElementById('onboard-prov-gemini').addEventListener('click', () => setOnboardProvider('gemini'));
-  document.getElementById('onboard-prov-openai').addEventListener('click', () => setOnboardProvider('openai'));
-
   document.getElementById('btn-finish-setup').addEventListener('click', () => {
-    const key   = document.getElementById('input-apikey').value.trim();
-    const model = document.getElementById('onboard-model').value;
-    const err   = document.getElementById('error-apikey');
-    if (!key) { err.textContent = 'Please enter your API key.'; return; }
+    const key = document.getElementById('input-apikey').value.trim();
+    const err = document.getElementById('error-apikey');
+    if (!key) { err.textContent = 'Please enter your Gemini API key.'; return; }
     err.textContent = '';
-    const keyStore = onboardProvider === 'openai' ? 'vitaLog_openaiKey' : 'vitaLog_geminiKey';
-    Store.setRaw(keyStore, key);
-    Store.setRaw('vitaLog_provider', onboardProvider);
-    Store.setRaw('vitaLog_model', model);
+    Store.setRaw('vitaLog_geminiKey', key);
+    Store.setRaw('vitaLog_provider', 'gemini');
     Store.set('vitaLog_profile', tempProfile);
     Store.setRaw('vitaLog_onboarded', 'true');
     document.getElementById('display-calories').textContent = tempProfile.calorieTarget;
     showStep('step-done');
     fsSet('profile', tempProfile).catch(() => {});
-    fsSet('settings', { provider: onboardProvider, model }).catch(() => {});
+    fsSet('settings', { provider: 'gemini' }).catch(() => {});
   });
 
   document.getElementById('btn-start-tracking').addEventListener('click', () => {
@@ -335,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.setLineDash([]);
     }
 
-    // Bars
+    // Bars + labels
     values.forEach((v, i) => {
       const x   = pad.left + gap * i + (gap - barW) / 2;
       const bH  = v > 0 ? Math.max(chartH * (v / maxVal), 3) : 0;
@@ -345,9 +326,18 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.roundRect(x, y, barW, bH, 3);
       ctx.fill();
 
-      // Label below bar
+      // Value on top of bar
+      if (v > 0) {
+        ctx.fillStyle = '#aaa';
+        ctx.font      = '9px DM Sans, sans-serif';
+        ctx.textAlign = 'center';
+        const label   = v >= 1000 ? Math.round(v / 100) / 10 + 'k' : String(Math.round(v));
+        ctx.fillText(label, x + barW / 2, Math.max(y - 3, pad.top + 9));
+      }
+
+      // x-axis label below bar
       ctx.fillStyle = '#666';
-      ctx.font      = `${10 * dpr / dpr}px DM Sans, sans-serif`;
+      ctx.font      = '10px DM Sans, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(labels[i], x + barW / 2, H - 8);
     });
@@ -389,20 +379,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('weekly-total-deficit').textContent = fmtDeficit(Math.round(totalDef));
     document.getElementById('weekly-avg-deficit').textContent   = fmtDeficit(avgDef);
 
-    // Today's macro split
-    const snap = buildTodaySnapshot();
-    const macroTotal = (snap.protein_g || 0) + (snap.carbs_g || 0) + (snap.fat_g || 0);
-    if (macroTotal > 0) {
-      document.getElementById('split-protein').textContent = pct(snap.protein_g, macroTotal) + '%';
-      document.getElementById('split-carbs').textContent   = pct(snap.carbs_g,   macroTotal) + '%';
-      document.getElementById('split-fat').textContent     = pct(snap.fat_g,     macroTotal) + '%';
-    } else {
-      ['split-protein','split-carbs','split-fat'].forEach(id => document.getElementById(id).textContent = '—');
-    }
-
-    // Today's workout burn
-    const burn = snap.workoutKcal || 0;
-    document.getElementById('weekly-workout-burn').textContent = burn + ' kcal burnt today';
+    // Table
+    const DAY_FULL = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const tableRows = days.map(({ key, data }) => {
+      const d    = new Date(key + 'T00:00:00');
+      const cal  = data ? Math.round(data.calories) : 0;
+      const diff = data ? Math.round(target - data.calories) : null;
+      const tag  = diff === null ? '' : diff > 0 ? `<span class="tbl-tag tbl-deficit">-${diff}</span>` : `<span class="tbl-tag tbl-surplus">+${Math.abs(diff)}</span>`;
+      return `<tr class="${!data ? 'tbl-empty' : ''}">
+        <td>${DAY_FULL[d.getDay()]} ${d.getDate()}</td>
+        <td>${data ? cal + ' kcal' : '—'}</td>
+        <td>${tag}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('weekly-table').innerHTML =
+      `<table class="dash-tbl"><thead><tr><th>Day</th><th>Calories</th><th>vs Target</th></tr></thead><tbody>${tableRows}</tbody></table>`;
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -444,10 +435,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('monthly-avg').textContent          = avgCals ? avgCals + ' kcal' : '—';
     document.getElementById('monthly-total-deficit').textContent = fmtDeficit(Math.round(totalDef));
-    document.getElementById('monthly-best').textContent         = bestDay  ? bestDay.key.slice(8)  + ' (' + bestDay.calories  + ' kcal)' : '—';
-    document.getElementById('monthly-worst').textContent        = worstDay ? worstDay.key.slice(8) + ' (' + worstDay.calories + ' kcal)' : '—';
-    document.getElementById('monthly-streak').textContent       = streak + ' day' + (streak !== 1 ? 's' : '') + ' logged in a row';
-    document.getElementById('monthly-workout-burn').textContent = burnTotal + ' kcal';
+
+    // Monthly table
+    const monthRows = entries.map(e => {
+      const diff = Math.round(target - e.calories);
+      const tag  = diff > 0 ? `<span class="tbl-tag tbl-deficit">-${diff}</span>` : `<span class="tbl-tag tbl-surplus">+${Math.abs(diff)}</span>`;
+      return `<tr><td>${e.key.slice(5)}</td><td>${Math.round(e.calories)} kcal</td><td>${tag}</td></tr>`;
+    }).join('') || '<tr><td colspan="3" style="text-align:center;color:#555">No data yet</td></tr>';
+    document.getElementById('monthly-table').innerHTML =
+      `<table class="dash-tbl"><thead><tr><th>Date</th><th>Calories</th><th>vs Target</th></tr></thead><tbody>${monthRows}</tbody></table>`;
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -494,9 +490,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('yearly-total-cals').textContent   = yearlyTotal  ? yearlyTotal.toLocaleString() + ' kcal' : '—';
     document.getElementById('yearly-avg').textContent          = yearlyAvg    ? yearlyAvg + ' kcal/day'  : '—';
-    document.getElementById('yearly-best-month').textContent   = monthlyAvgs[bestIdx]  > 0 ? MONTHS[bestIdx]  : '—';
-    document.getElementById('yearly-worst-month').textContent  = monthlyAvgs[worstIdx] > 0 ? MONTHS[worstIdx] : '—';
-    document.getElementById('yearly-workout-burn').textContent = yearlyBurn   ? yearlyBurn.toLocaleString() + ' kcal' : '0 kcal';
+
+    // Yearly table
+    const yearRows = MONTHS.map((m, i) => {
+      const v    = monthlyAvgs[i];
+      const burn = monthlyBurns[i];
+      if (!v) return `<tr class="tbl-empty"><td>${m}</td><td>—</td><td>—</td></tr>`;
+      const diff = Math.round(target - v);
+      const tag  = diff > 0 ? `<span class="tbl-tag tbl-deficit">-${diff}</span>` : `<span class="tbl-tag tbl-surplus">+${Math.abs(diff)}</span>`;
+      return `<tr><td>${m}</td><td>${v} kcal/day</td><td>${tag}</td></tr>`;
+    }).join('');
+    document.getElementById('yearly-table').innerHTML =
+      `<table class="dash-tbl"><thead><tr><th>Month</th><th>Avg Calories</th><th>vs Target</th></tr></thead><tbody>${yearRows}</tbody></table>`;
   }
 
   // ── Shared helpers ──────────────────────────────────────────────
@@ -579,55 +584,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ════════════════════════════════════════════════════════════════
-  // PROVIDER CONFIG
+  // AI API — Gemini only, auto-rotates through all 3 models on failure
   // ════════════════════════════════════════════════════════════════
 
-  const MODELS = {
-    gemini: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'],
-    openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo'],
-  };
-  const API_LINKS = {
-    gemini: { href: 'https://aistudio.google.com/app/apikey',   text: 'Get a free key at Google AI Studio →' },
-    openai: { href: 'https://platform.openai.com/api-keys',     text: 'Get a key at OpenAI Platform →' },
-  };
+  const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
 
   const EYE_OPEN_SVG   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
   const EYE_CLOSED_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 
-  // ════════════════════════════════════════════════════════════════
-  // AI API
-  // ════════════════════════════════════════════════════════════════
-
-  async function callAI(prompt, jsonMode = true, retries = 2) {
-    const provider = Store.raw('vitaLog_provider') || 'gemini';
-    const model    = Store.raw('vitaLog_model') || (provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash');
-
-    if (provider === 'openai') {
-      const apiKey = Store.raw('vitaLog_openaiKey');
-      if (!apiKey) throw new Error('NO_KEY');
-      const body = { model, messages: [{ role: 'user', content: prompt }] };
-      if (jsonMode) body.response_format = { type: 'json_object' };
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) {
-        if (response.status >= 500 && retries > 0) {
-          await new Promise(r => setTimeout(r, 1500));
-          return callAI(prompt, jsonMode, retries - 1);
-        }
-        throw new Error(`HTTP_${response.status}`);
-      }
-      const data = await response.json();
-      return data.choices[0].message.content;
-    }
-
-    // Gemini (default)
+  async function callAI(prompt, jsonMode = true, modelIdx = 0) {
     const apiKey = Store.raw('vitaLog_geminiKey') || Store.raw('vitaLog_apiKey');
     if (!apiKey) throw new Error('NO_KEY');
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    const body = { contents: [{ parts: [{ text: prompt }] }] };
+    const model = GEMINI_MODELS[modelIdx] || GEMINI_MODELS[0];
+    const url   = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const body  = { contents: [{ parts: [{ text: prompt }] }] };
     if (jsonMode) body.generationConfig = { responseMimeType: 'application/json' };
     const response = await fetch(url, {
       method: 'POST',
@@ -635,9 +605,9 @@ document.addEventListener('DOMContentLoaded', () => {
       body: JSON.stringify(body),
     });
     if (!response.ok) {
-      if (response.status >= 500 && retries > 0) {
-        await new Promise(r => setTimeout(r, 1500));
-        return callAI(prompt, jsonMode, retries - 1);
+      if (response.status >= 500 && modelIdx < GEMINI_MODELS.length - 1) {
+        await new Promise(r => setTimeout(r, 1000));
+        return callAI(prompt, jsonMode, modelIdx + 1);
       }
       throw new Error(`HTTP_${response.status}`);
     }
@@ -653,11 +623,21 @@ document.addEventListener('DOMContentLoaded', () => {
     showFoodLoading(true);
 
     const prompt = `You are a nutrition database. The user logged: "${userInput}"
-Identify ALL individual food items and return a JSON array. Each item must have these exact fields:
-{"name":"","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"fibre_g":0}
-Return ONLY a valid JSON array, no markdown, no explanation.
-Example: input "2 eggs and toast with butter" → [{"name":"2 eggs","calories":140,...},{"name":"toast with butter","calories":150,...}]
-Use null for unknown values. Estimate reasonable values where possible.`;
+
+RULES:
+- Only split into multiple items if the user listed DISTINCT foods separated by commas or "and"/"&".
+- A compound food name like "paneer sandwich" or "chicken tikka masala" is ONE item — do NOT split it.
+- Use the exact food name as the user wrote it (without the quantity number).
+- "quantity" = the number from the input (default 1). "unit" = piece/slice/cup/serving etc.
+- Return calories/macros PER UNIT so the user can adjust quantity later.
+
+Return ONLY a valid JSON array, no markdown:
+[{"name":"","quantity":1,"unit":"serving","calories_per_unit":0,"protein_g_per_unit":0,"carbs_g_per_unit":0,"fat_g_per_unit":0,"fibre_g_per_unit":0}]
+
+Examples:
+- "1 paneer sandwich" → [{"name":"paneer sandwich","quantity":1,"unit":"piece","calories_per_unit":280,...}]
+- "2 slices bread" → [{"name":"bread","quantity":2,"unit":"slice","calories_per_unit":80,...}]
+- "1 paneer sandwich and 1 chicken tandoori" → two items`;
 
     try {
       const raw    = await callAI(prompt);
@@ -665,15 +645,28 @@ Use null for unknown values. Estimate reasonable values where possible.`;
       if (!Array.isArray(parsed)) parsed = [parsed];
       const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
       parsed.forEach((data, i) => {
+        const qty = data.quantity || 1;
+        const cpu = data.calories_per_unit    || 0;
+        const ppu = data.protein_g_per_unit   || 0;
+        const cbu = data.carbs_g_per_unit     || 0;
+        const fpu = data.fat_g_per_unit       || 0;
+        const fbu = data.fibre_g_per_unit     || 0;
         todayData.foods.push({
-          id:        Date.now() + i,
-          time:      now,
-          name:      data.name      || userInput,
-          calories:  data.calories  ?? null,
-          protein_g: data.protein_g ?? null,
-          carbs_g:   data.carbs_g   ?? null,
-          fat_g:     data.fat_g     ?? null,
-          fibre_g:   data.fibre_g   ?? null,
+          id:            Date.now() + i,
+          time:          now,
+          name:          data.name || userInput,
+          quantity:      qty,
+          unit:          data.unit || 'serving',
+          cal_per_unit:  cpu,
+          pro_per_unit:  ppu,
+          car_per_unit:  cbu,
+          fat_per_unit:  fpu,
+          fib_per_unit:  fbu,
+          calories:      Math.round(cpu * qty),
+          protein_g:     Math.round(ppu * qty * 10) / 10,
+          carbs_g:       Math.round(cbu * qty * 10) / 10,
+          fat_g:         Math.round(fpu * qty * 10) / 10,
+          fibre_g:       Math.round(fbu * qty * 10) / 10,
         });
       });
       saveToday();
@@ -700,9 +693,13 @@ Use null for unknown values. Estimate reasonable values where possible.`;
     list.innerHTML = todayData.foods.map(f => `
       <div class="food-card" data-id="${f.id}">
         <div class="food-card-header">
-          <div>
+          <div class="food-name-wrap">
             <span class="food-name">${escapeHtml(f.name)}</span>
-            <span class="food-time">${f.time}</span>
+            <div class="qty-row">
+              <input type="number" class="qty-input food-qty" data-id="${f.id}" value="${f.quantity || 1}" min="0.5" step="0.5" aria-label="Quantity" />
+              <span class="qty-unit">${escapeHtml(f.unit || 'serving')}</span>
+              <span class="food-time">${f.time}</span>
+            </div>
           </div>
           <button class="delete-btn" data-id="${f.id}" aria-label="Delete">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -712,7 +709,7 @@ Use null for unknown values. Estimate reasonable values where possible.`;
           </button>
         </div>
         <div class="food-card-macros">
-          <div class="macro-pill"><span>${fmt(f.calories)}</span><small>kcal</small></div>
+          <div class="macro-pill accent"><span>${fmt(f.calories)}</span><small>kcal</small></div>
           <div class="macro-pill"><span>${fmt(f.protein_g)}g</span><small>protein</small></div>
           <div class="macro-pill"><span>${fmt(f.carbs_g)}g</span><small>carbs</small></div>
           <div class="macro-pill"><span>${fmt(f.fat_g)}g</span><small>fat</small></div>
@@ -722,10 +719,30 @@ Use null for unknown values. Estimate reasonable values where possible.`;
     `).join('');
   }
 
-  // Event delegation — one listener handles all delete buttons
   document.getElementById('food-log-list').addEventListener('click', e => {
     const btn = e.target.closest('.delete-btn');
     if (btn) deleteFood(Number(btn.dataset.id));
+  });
+
+  document.getElementById('food-log-list').addEventListener('change', e => {
+    const input = e.target.closest('.food-qty');
+    if (input) {
+      const id  = Number(input.dataset.id);
+      const qty = Math.max(0.5, parseFloat(input.value) || 1);
+      const food = todayData.foods.find(f => f.id === id);
+      if (!food) return;
+      food.quantity  = qty;
+      if (food.cal_per_unit) {
+        food.calories  = Math.round(food.cal_per_unit * qty);
+        food.protein_g = Math.round(food.pro_per_unit * qty * 10) / 10;
+        food.carbs_g   = Math.round(food.car_per_unit * qty * 10) / 10;
+        food.fat_g     = Math.round(food.fat_per_unit * qty * 10) / 10;
+        food.fibre_g   = Math.round(food.fib_per_unit * qty * 10) / 10;
+      }
+      saveToday();
+      renderFoodLog();
+      renderDashboard();
+    }
   });
 
   function deleteFood(id) {
@@ -814,10 +831,14 @@ Use null for any value you are unsure about. Estimate reasonable values where po
     empty.classList.add('hidden');
     list.innerHTML = todayData.workouts.map(w => `
       <div class="workout-card" data-id="${w.id}">
-        <div class="workout-card-header">
-          <div>
+        <div class="food-card-header">
+          <div class="food-name-wrap">
             <span class="workout-name">${escapeHtml(w.exercise)}</span>
-            <span class="workout-time">${w.time}</span>
+            <div class="qty-row">
+              <input type="number" class="qty-input workout-dur" data-id="${w.id}" value="${w.duration_min || 0}" min="1" step="1" aria-label="Duration in minutes" />
+              <span class="qty-unit">min</span>
+              <span class="food-time">${w.time}</span>
+            </div>
           </div>
           <button class="delete-btn" data-id="${w.id}" aria-label="Delete">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -826,15 +847,8 @@ Use null for any value you are unsure about. Estimate reasonable values where po
             </svg>
           </button>
         </div>
-        <div class="workout-card-stats">
-          <div class="stat-pill">
-            <span>${fmt(w.duration_min)} min</span>
-            <small>duration</small>
-          </div>
-          <div class="stat-pill highlight">
-            <span>${fmt(w.calories_burnt)} kcal</span>
-            <small>burnt</small>
-          </div>
+        <div class="food-card-macros">
+          <div class="macro-pill accent"><span>${fmt(w.calories_burnt)}</span><small>kcal burnt</small></div>
         </div>
       </div>
     `).join('');
@@ -843,6 +857,23 @@ Use null for any value you are unsure about. Estimate reasonable values where po
   document.getElementById('workout-log-list').addEventListener('click', e => {
     const btn = e.target.closest('.delete-btn');
     if (btn) deleteWorkout(Number(btn.dataset.id));
+  });
+
+  document.getElementById('workout-log-list').addEventListener('change', e => {
+    const input = e.target.closest('.workout-dur');
+    if (input) {
+      const id  = Number(input.dataset.id);
+      const dur = Math.max(1, parseInt(input.value) || 1);
+      const w   = todayData.workouts.find(x => x.id === id);
+      if (!w) return;
+      if (w.duration_min && w.calories_burnt) {
+        w.calories_burnt = Math.round(w.calories_burnt / w.duration_min * dur);
+      }
+      w.duration_min = dur;
+      saveToday();
+      renderWorkoutLog();
+      renderDashboard();
+    }
   });
 
   function deleteWorkout(id) {
@@ -911,13 +942,11 @@ Use null for any value you are unsure about. Estimate reasonable values where po
   }
 
   function showError(err) {
-    const provider = Store.raw('vitaLog_provider') || 'gemini';
-    const model    = Store.raw('vitaLog_model') || (provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash');
-    const m        = err.message || String(err);
+    const m = err.message || String(err);
     const lines = [
       `Error:    ${m}`,
-      `Provider: ${provider}`,
-      `Model:    ${model}`,
+      `Provider: Gemini`,
+      `Models tried: ${GEMINI_MODELS.join(' → ')}`,
       `Time:     ${new Date().toISOString()}`,
     ];
     if (err.stack) lines.push(`\nStack:\n${err.stack}`);
@@ -956,12 +985,8 @@ Use null for any value you are unsure about. Estimate reasonable values where po
   // SETTINGS
   // ════════════════════════════════════════════════════════════════
 
-  let settingsProvider = 'gemini';
-
-  function keyStatusText(prov) {
-    const geminiKey = Store.raw('vitaLog_geminiKey') || Store.raw('vitaLog_apiKey') || '';
-    const openaiKey = Store.raw('vitaLog_openaiKey') || '';
-    const key = prov === 'openai' ? openaiKey : geminiKey;
+  function keyStatusText() {
+    const key = Store.raw('vitaLog_geminiKey') || Store.raw('vitaLog_apiKey') || '';
     const el  = document.getElementById('settings-key-status');
     if (key) {
       el.textContent = `Key saved: ${key.slice(0, 4)}${'•'.repeat(10)}`;
@@ -972,31 +997,15 @@ Use null for any value you are unsure about. Estimate reasonable values where po
     }
   }
 
-  function setSettingsProvider(prov) {
-    settingsProvider = prov;
-    document.getElementById('settings-prov-gemini').classList.toggle('active', prov === 'gemini');
-    document.getElementById('settings-prov-openai').classList.toggle('active', prov === 'openai');
-    document.getElementById('settings-provider-display').textContent = prov === 'openai' ? 'OpenAI' : 'Gemini';
-    const sel = document.getElementById('settings-model-select');
-    const saved = Store.raw('vitaLog_model') || '';
-    sel.innerHTML = MODELS[prov].map((m, i) => `<option value="${m}">${m}${i === 0 ? ' (recommended)' : ''}</option>`).join('');
-    if (MODELS[prov].includes(saved)) sel.value = saved;
-    keyStatusText(prov);
-  }
-
   function initSettings() {
-    const profile  = Store.get('vitaLog_profile');
-    const target   = profile?.calorieTarget || '—';
+    const profile = Store.get('vitaLog_profile');
+    const target  = profile?.calorieTarget || '—';
     document.getElementById('settings-cal-display').textContent = target + ' kcal';
-    const prov = Store.raw('vitaLog_provider') || 'gemini';
-    setSettingsProvider(prov);
+    keyStatusText();
   }
-
-  document.getElementById('settings-prov-gemini').addEventListener('click', () => setSettingsProvider('gemini'));
-  document.getElementById('settings-prov-openai').addEventListener('click', () => setSettingsProvider('openai'));
 
   document.getElementById('settings-key-eye').addEventListener('click', () => {
-    const input   = document.getElementById('settings-key-input');
+    const input    = document.getElementById('settings-key-input');
     const isHidden = input.type === 'password';
     input.type = isHidden ? 'text' : 'password';
     document.getElementById('settings-key-eye').innerHTML = isHidden ? EYE_CLOSED_SVG : EYE_OPEN_SVG;
@@ -1016,18 +1025,14 @@ Use null for any value you are unsure about. Estimate reasonable values where po
   });
 
   document.getElementById('btn-save-key').addEventListener('click', () => {
-    const key   = document.getElementById('settings-key-input').value.trim();
-    const model = document.getElementById('settings-model-select').value;
+    const key = document.getElementById('settings-key-input').value.trim();
     if (!key) { showToast('Please paste your API key.'); return; }
-    const keyStore = settingsProvider === 'openai' ? 'vitaLog_openaiKey' : 'vitaLog_geminiKey';
-    Store.setRaw(keyStore, key);
-    Store.setRaw('vitaLog_provider', settingsProvider);
-    Store.setRaw('vitaLog_model', model);
-    fsSet('settings', { provider: settingsProvider, model }).catch(() => {});
+    Store.setRaw('vitaLog_geminiKey', key);
+    fsSet('settings', { provider: 'gemini' }).catch(() => {});
     document.getElementById('settings-key-input').value = '';
-    document.getElementById('settings-key-input').type = 'password';
+    document.getElementById('settings-key-input').type  = 'password';
     document.getElementById('settings-key-eye').innerHTML = EYE_OPEN_SVG;
-    keyStatusText(settingsProvider);
+    keyStatusText();
     showToast('API key updated.');
   });
 
@@ -1480,6 +1485,58 @@ Use null for any value you are unsure about. Estimate reasonable values where po
   });
 
   // ════════════════════════════════════════════════════════════════
+  // DATE NAVIGATION
+  // ════════════════════════════════════════════════════════════════
+
+  function getTodayKey() { return new Date().toISOString().split('T')[0]; }
+
+  let viewDateKey = getTodayKey();
+
+  function setViewDate(key) {
+    viewDateKey = key;
+    const d   = new Date(key + 'T00:00:00');
+    const opt = { weekday: 'short', month: 'short', day: 'numeric' };
+    document.getElementById('date-label').textContent = d.toLocaleDateString('en-US', opt);
+    document.getElementById('date-next').disabled = key >= getTodayKey();
+
+    if (key === getTodayKey()) {
+      renderFoodLog();
+      renderWorkoutLog();
+    } else {
+      const history = Store.get('vitaLog_history') || {};
+      const snap    = history[key];
+      const list    = document.getElementById('food-log-list');
+      const wlist   = document.getElementById('workout-log-list');
+      document.getElementById('food-empty').classList.add('hidden');
+      document.getElementById('workout-empty').classList.add('hidden');
+      if (snap) {
+        list.innerHTML  = `<div class="past-day-summary"><span>${Math.round(snap.calories)} kcal</span><small>consumed</small></div>
+          <div class="past-day-row"><span>Protein</span><span>${Math.round(snap.protein_g || 0)}g</span></div>
+          <div class="past-day-row"><span>Carbs</span><span>${Math.round(snap.carbs_g   || 0)}g</span></div>
+          <div class="past-day-row"><span>Fat</span><span>${Math.round(snap.fat_g      || 0)}g</span></div>
+          <div class="past-day-row"><span>Fibre</span><span>${Math.round(snap.fibre_g  || 0)}g</span></div>`;
+        wlist.innerHTML = `<div class="past-day-summary"><span>${Math.round(snap.workoutKcal || 0)} kcal</span><small>burnt</small></div>`;
+      } else {
+        list.innerHTML  = '<p class="empty-log">No data for this day.</p>';
+        wlist.innerHTML = '';
+      }
+    }
+  }
+
+  document.getElementById('date-prev').addEventListener('click', () => {
+    const d = new Date(viewDateKey + 'T00:00:00');
+    d.setDate(d.getDate() - 1);
+    setViewDate(d.toISOString().split('T')[0]);
+  });
+
+  document.getElementById('date-next').addEventListener('click', () => {
+    const d = new Date(viewDateKey + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    const next = d.toISOString().split('T')[0];
+    if (next <= getTodayKey()) setViewDate(next);
+  });
+
+  // ════════════════════════════════════════════════════════════════
   // BOOT
   // ════════════════════════════════════════════════════════════════
 
@@ -1488,8 +1545,7 @@ Use null for any value you are unsure about. Estimate reasonable values where po
     initApp();
     checkMidnightReset();
     renderDashboard();
-    renderFoodLog();
-    renderWorkoutLog();
+    setViewDate(getTodayKey());
   }
 
   auth.onAuthStateChanged(async (user) => {

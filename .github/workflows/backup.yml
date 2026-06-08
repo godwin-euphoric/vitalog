@@ -1,0 +1,30 @@
+name: Daily Backup
+
+on:
+  schedule:
+    - cron: '30 18 * * *'   # 18:30 UTC = midnight IST
+  workflow_dispatch:          # allow manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Write backup timestamp
+        run: |
+          mkdir -p backups
+          DATE=$(date -u '+%Y-%m-%d')
+          echo "{\"backup_date\":\"$DATE\",\"timestamp\":\"$(date -u '+%Y-%m-%dT%H:%M:%SZ')\"}" > backups/$DATE.json
+
+      - name: Commit backup
+        run: |
+          git config user.name  "VitaLog Backup"
+          git config user.email "backup@vitalog.app"
+          git add backups/
+          git diff --staged --quiet || git commit -m "Daily backup $(date -u '+%Y-%m-%d')"
+          git push
